@@ -44,10 +44,28 @@ function setKids(on){kidsMode=on;document.body.classList.toggle('kids',on);$('ki
 $('kidsb').onclick=()=>setKids(!kidsMode);setKids(kidsMode);
 
 /* ---------- read aloud ---------- */
-const canSpeak='speechSynthesis' in window;if(!canSpeak)$('readb').hidden=true;
+const canSpeak='speechSynthesis' in window;if(!canSpeak){$('readb').hidden=true}
 function readText(o){const k=KIDS[o.id];return `${o.name}. `+(kidsMode&&k?`${k[0]} Did you know? ${k[1]}`:(o.desc||''))}
+// voice options: any voice the device offers, plus speed and a fun pitch style; remembered on this device
+let VOICES=[],vpref={};try{vpref=JSON.parse(localStorage.getItem('galaxy.voice')||'{}')}catch(e){}
+const langName=l=>{try{return new Intl.DisplayNames([navigator.language||'en'],{type:'language'}).of(l)||l}catch(e){return l}};
+function loadVoices(){if(!canSpeak)return;VOICES=speechSynthesis.getVoices()||[];if(!VOICES.length)return;
+ const mine=(navigator.language||'en').slice(0,2).toLowerCase(),nice=v=>v.name.replace(/^(Microsoft|Google)\s+/,'').replace(/\s+Online \(Natural\)/,' (natural)').replace(/ - [A-Za-z ()]+$/,'');
+ const idx=VOICES.map((v,i)=>i),groups={};idx.forEach(i=>{const l=VOICES[i].lang||'',k=l.slice(0,2).toLowerCase()===mine?'0':'1'+l;(groups[k]=groups[k]||[]).push(i)});
+ const html=Object.keys(groups).sort().map(k=>{const items=groups[k].sort((a,b)=>VOICES[a].name.localeCompare(VOICES[b].name)).map(i=>`<option value="${i}">${nice(VOICES[i]).replace(/</g,'&lt;')}${VOICES[i].localService===false?' (online)':''} · ${VOICES[i].lang}</option>`).join('');
+  return `<optgroup label="${k==='0'?langName(mine)+' voices':langName(k.slice(1))}">${items}</optgroup>`}).join('');
+ $('voicesel').innerHTML='<option value="">Device default</option>'+html;
+ const keep=VOICES.findIndex(v=>v.voiceURI===vpref.uri);$('voicesel').value=keep>=0?String(keep):'';
+ $('voicerate').value=vpref.rate||'1';$('voicepitch').value=vpref.pitch||'1';$('voicebox').hidden=false}
+if(canSpeak){loadVoices();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',loadVoices):(speechSynthesis.onvoiceschanged=loadVoices)}
+function saveVoice(){const v=VOICES[+$('voicesel').value];vpref={uri:$('voicesel').value===''?'':v&&v.voiceURI,rate:$('voicerate').value,pitch:$('voicepitch').value};try{localStorage.setItem('galaxy.voice',JSON.stringify(vpref))}catch(e){}}
+['voicesel','voicerate','voicepitch'].forEach(id=>$(id).addEventListener('change',()=>{saveVoice();speak('Hello! This is how I sound.')}));
+function speak(text,onend){if(!canSpeak)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text),v=VOICES[+$('voicesel').value];
+ if($('voicesel').value!==''&&v){u.voice=v;u.lang=v.lang}u.rate=parseFloat($('voicerate').value||'1')*(kidsMode?.92:1);u.pitch=parseFloat($('voicepitch').value||'1');
+ u.onend=u.onerror=()=>{$('readb').textContent='Read aloud';onend&&onend()};speechSynthesis.speak(u);window.__lastUtter={text,voice:v?v.name:'default',rate:u.rate,pitch:u.pitch}}
+$('voicetest').onclick=()=>speak(focus?`Hi! I can read about ${focus.name} for you.`:'Hi! I can read about anything in space for you.');
 $('readb').onclick=()=>{if(!canSpeak||!focus)return;if(speechSynthesis.speaking){speechSynthesis.cancel();$('readb').textContent='Read aloud';return}
- const u=new SpeechSynthesisUtterance(readText(focus));u.rate=kidsMode?.92:1;u.onend=u.onerror=()=>$('readb').textContent='Read aloud';speechSynthesis.speak(u);$('readb').textContent='Stop reading'};
+ speak(readText(focus));$('readb').textContent='Stop reading'};
 
 /* ---------- space passport ---------- */
 const STAMP_IDS=['sun','mercury','venus','earth','moon','mars','jupiter','saturn','uranus','neptune','pluto','io','europa','ganymede','callisto','titan','enceladus','triton','charon','phobos','belt','halley','encke','halebopp','iss','tiangong','hubble','jwst','proxima','acen','sirius','vega','polaris','betelgeuse','rigel','milky','andromeda','sgra'];

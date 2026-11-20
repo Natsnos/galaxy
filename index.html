@@ -83,6 +83,16 @@
   <div class="frow" id="phtog" hidden><button data-ph="photo" class="on">Real photo</button><button data-ph="model">3D model</button></div>
   <canvas id="pic" width="480" height="480"></canvas>
   <div class="cap" id="piccap">Rendered portrait from this model. Tap below for real telescope and spacecraft photos.</div>
+  <div class="frow" id="sharerow"><button id="readb">Read aloud</button><button id="copylink">Copy link to this</button><button id="postb">Postcard</button><button id="sethome" hidden>Make this my home</button></div>
+  <details id="voicebox" hidden><summary>Voice options</summary>
+    <div class="vgrid">
+      <label>Voice <select id="voicesel"></select></label>
+      <label>Speed <select id="voicerate"><option value=".7">Slow</option><option value=".85">A bit slow</option><option value="1" selected>Normal</option><option value="1.2">Fast</option></select></label>
+      <label>Style <select id="voicepitch"><option value="1" selected>Normal</option><option value=".55">Deep (robot)</option><option value="1.5">High</option><option value="1.9">Squeaky (chipmunk)</option></select></label>
+    </div>
+    <div class="frow"><button id="voicetest">Test this voice</button></div>
+    <p class="cap" id="voicenote">The voices come from your device, so each phone, tablet or computer offers different ones.</p>
+  </details>
   <div class="sub" id="ilivecap">Right now (at the time shown)</div>
   <table id="ilive"></table>
   <div class="sub">Facts</div>
@@ -101,7 +111,6 @@
       <div id="wxcap" class="cap"></div></div>
     <div id="imgx" hidden><div class="sub">Earth imagery</div><div class="frow"><button data-img="map">Standard</button><button data-img="bm">Blue Marble</button><button data-img="yday">Yesterday from space</button></div></div>
   </div>
-  <div class="frow" id="sharerow"><button id="readb">Read aloud</button><button id="copylink">Copy link to this</button><button id="postb">Postcard</button><button id="sethome" hidden>Make this my home</button></div>
   <div id="extra"></div>
   <p id="idesc"></p>
   <div id="kidfact" hidden></div>
