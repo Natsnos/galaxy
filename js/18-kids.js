@@ -47,21 +47,33 @@ $('kidsb').onclick=()=>setKids(!kidsMode);setKids(kidsMode);
 const canSpeak='speechSynthesis' in window;if(!canSpeak){$('readb').hidden=true}
 function readText(o){const k=KIDS[o.id];return `${o.name}. `+(kidsMode&&k?`${k[0]} Did you know? ${k[1]}`:(o.desc||''))}
 // voice options: any voice the device offers, plus speed and a fun pitch style; remembered on this device
-let VOICES=[],vpref={};try{vpref=JSON.parse(localStorage.getItem('galaxy.voice')||'{}')}catch(e){}
+let VOICES=[],vpref={};
+// voice names don't say male or female, so we recognise the common ones from each system (Apple, Microsoft, Google, Android, Amazon)
+const FEMALE=/\b(female|woman|samantha|victoria|karen|moira|tessa|fiona|veena|allison|ava|susan|kathy|princess|vicki|zoe|nicky|serena|kate|stephanie|zira|aria|jenny|hazel|libby|sonia|michelle|emma|ana|clara|natasha|catherine|heera|neerja|elsa|denise|katja|amala|paulina|monica|m[oó]nica|helena|laura|lucia|elvira|dalia|camila|francisca|salome|amelie|am[eé]lie|audrey|aurelie|marie|julie|sylvie|ellen|alice|federica|isabella|elsa|anna|petra|marlene|vicki|joanna|kendra|kimberly|salli|ivy|ruth|olivia|amy|nicole|raveena|aditi|kajal|yuna|kyoko|o-ren|ting-ting|mei-jia|sin-ji|lekha|sara|nora|milena|mariska|alva|ioana|zuzana|carmit|tessa|luciana|joana|fernanda|google us english|google uk english female|google français|google español)\b/i;
+const MALE=/\b(male|man|alex|daniel|fred|tom|aaron|arthur|gordon|oliver|rishi|ralph|junior|evan|nathan|david|mark|george|guy|ryan|christopher|eric|brian|andrew|steffan|roger|james|william|liam|connor|davis|tony|jason|henri|thomas|jacques|jorge|diego|juan|carlos|alvaro|pablo|raul|stefan|markus|hans|conrad|luca|cosimo|reed|rocko|grandpa|eddy|matthew|justin|joey|russell|geraint|giorgio|maxim|yuri|otoya|ichiro|li-mu|yannick|xander|google uk english male)\b/i;
+const genderOf=v=>{const n=v.name;if(/\bfemale\b/i.test(n))return'female';if(/\bmale\b/i.test(n))return'male';if(FEMALE.test(n))return'female';if(MALE.test(n))return'male';return''};
+let vgender='any';try{vpref=JSON.parse(localStorage.getItem('galaxy.voice')||'{}')}catch(e){}
 const langName=l=>{try{return new Intl.DisplayNames([navigator.language||'en'],{type:'language'}).of(l)||l}catch(e){return l}};
-function loadVoices(){if(!canSpeak)return;VOICES=speechSynthesis.getVoices()||[];if(!VOICES.length)return;
+function loadVoices(){if(!canSpeak)return;VOICES=speechSynthesis.getVoices()||[];if(!VOICES.length)return;vgender=vpref.g||'any';
+ document.querySelectorAll('[data-vg]').forEach(b=>b.classList.toggle('on',b.dataset.vg===vgender));
  const mine=(navigator.language||'en').slice(0,2).toLowerCase(),nice=v=>v.name.replace(/^(Microsoft|Google)\s+/,'').replace(/\s+Online \(Natural\)/,' (natural)').replace(/ - [A-Za-z ()]+$/,'');
- const idx=VOICES.map((v,i)=>i),groups={};idx.forEach(i=>{const l=VOICES[i].lang||'',k=l.slice(0,2).toLowerCase()===mine?'0':'1'+l;(groups[k]=groups[k]||[]).push(i)});
- const html=Object.keys(groups).sort().map(k=>{const items=groups[k].sort((a,b)=>VOICES[a].name.localeCompare(VOICES[b].name)).map(i=>`<option value="${i}">${nice(VOICES[i]).replace(/</g,'&lt;')}${VOICES[i].localService===false?' (online)':''} · ${VOICES[i].lang}</option>`).join('');
+ const idx=VOICES.map((v,i)=>i).filter(i=>vgender==='any'||genderOf(VOICES[i])===vgender),groups={};idx.forEach(i=>{const l=VOICES[i].lang||'',k=l.slice(0,2).toLowerCase()===mine?'0':'1'+l;(groups[k]=groups[k]||[]).push(i)});
+ const html=Object.keys(groups).sort().map(k=>{const items=groups[k].sort((a,b)=>VOICES[a].name.localeCompare(VOICES[b].name)).map(i=>`<option value="${i}">${nice(VOICES[i]).replace(/</g,'&lt;')}${genderOf(VOICES[i])?' ('+genderOf(VOICES[i])+')':''}${VOICES[i].localService===false?' (online)':''} · ${VOICES[i].lang}</option>`).join('');
   return `<optgroup label="${k==='0'?langName(mine)+' voices':langName(k.slice(1))}">${items}</optgroup>`}).join('');
- $('voicesel').innerHTML='<option value="">Device default</option>'+html;
- const keep=VOICES.findIndex(v=>v.voiceURI===vpref.uri);$('voicesel').value=keep>=0?String(keep):'';
+ const none=vgender!=='any'&&!idx.length;
+ $('voicesel').innerHTML=(none?`<option value="">Default voice, ${vgender==='female'?'higher':'lower'} pitch</option>`:vgender==='any'?'<option value="">Device default</option>':'')+html;
+ $('voicenote').textContent=none?`This device doesn’t have a ${vgender} voice we can recognise, so we’ll use its default voice with a ${vgender==='female'?'higher':'deeper'} pitch. You can add more voices in your device’s speech or accessibility settings.`:'The voices come from your device, so each phone, tablet or computer offers different ones. Tip: many devices let you download extra voices in their speech settings.';
+ let keep=VOICES.findIndex(v=>v.voiceURI===vpref.uri);if(keep>=0&&!idx.includes(keep))keep=-1;
+ // no saved voice for this type yet: pick one in your language, preferring local voices
+ if(keep<0&&vgender!=='any'&&idx.length){const mine=(navigator.language||'en').slice(0,2).toLowerCase();keep=[...idx].sort((a,b)=>((VOICES[a].lang||'').toLowerCase().startsWith(mine)?0:2)+(VOICES[a].localService===false?1:0)-(((VOICES[b].lang||'').toLowerCase().startsWith(mine)?0:2)+(VOICES[b].localService===false?1:0)))[0]}
+ $('voicesel').value=keep>=0?String(keep):'';
  $('voicerate').value=vpref.rate||'1';$('voicepitch').value=vpref.pitch||'1';$('voicebox').hidden=false}
 if(canSpeak){loadVoices();speechSynthesis.addEventListener?speechSynthesis.addEventListener('voiceschanged',loadVoices):(speechSynthesis.onvoiceschanged=loadVoices)}
-function saveVoice(){const v=VOICES[+$('voicesel').value];vpref={uri:$('voicesel').value===''?'':v&&v.voiceURI,rate:$('voicerate').value,pitch:$('voicepitch').value};try{localStorage.setItem('galaxy.voice',JSON.stringify(vpref))}catch(e){}}
+function saveVoice(){const v=VOICES[+$('voicesel').value];vpref={uri:$('voicesel').value===''?'':v&&v.voiceURI,rate:$('voicerate').value,pitch:$('voicepitch').value,g:vgender};try{localStorage.setItem('galaxy.voice',JSON.stringify(vpref))}catch(e){}}
+document.querySelectorAll('[data-vg]').forEach(b=>b.onclick=()=>{vgender=b.dataset.vg;vpref.g=vgender;vpref.uri='';loadVoices();saveVoice();speak(vgender==='female'?'Hi! This is a female voice.':vgender==='male'?'Hi! This is a male voice.':'Hello! This is how I sound.')});
 ['voicesel','voicerate','voicepitch'].forEach(id=>$(id).addEventListener('change',()=>{saveVoice();speak('Hello! This is how I sound.')}));
 function speak(text,onend){if(!canSpeak)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text),v=VOICES[+$('voicesel').value];
- if($('voicesel').value!==''&&v){u.voice=v;u.lang=v.lang}u.rate=parseFloat($('voicerate').value||'1')*(kidsMode?.92:1);u.pitch=parseFloat($('voicepitch').value||'1');
+ if($('voicesel').value!==''&&v){u.voice=v;u.lang=v.lang}u.rate=parseFloat($('voicerate').value||'1')*(kidsMode?.92:1);u.pitch=parseFloat($('voicepitch').value||'1');if($('voicesel').value===''&&vgender!=='any')u.pitch=Math.min(2,u.pitch*(vgender==='female'?1.35:.75));
  u.onend=u.onerror=()=>{$('readb').textContent='Read aloud';onend&&onend()};speechSynthesis.speak(u);window.__lastUtter={text,voice:v?v.name:'default',rate:u.rate,pitch:u.pitch}}
 $('voicetest').onclick=()=>speak(focus?`Hi! I can read about ${focus.name} for you.`:'Hi! I can read about anything in space for you.');
 $('readb').onclick=()=>{if(!canSpeak||!focus)return;if(speechSynthesis.speaking){speechSynthesis.cancel();$('readb').textContent='Read aloud';return}
