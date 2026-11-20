@@ -71,6 +71,14 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
 #gmap{width:100%;aspect-ratio:1;border:0;border-radius:14px;display:block;background:#0b0f1c}
 #results .ev{cursor:pointer}#results:empty{display:none}
 #phwrap{position:relative}#phbadge{position:absolute;left:10px;top:10px;background:#000b;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid #fff4}
+.wxbar{height:14px;border-radius:7px;border:1px solid #fff3;margin-top:8px}.wxticks{position:relative;height:18px;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.wxticks span{position:absolute;transform:translateX(-50%);top:2px;white-space:nowrap}.wxwords{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-top:2px}
+#wxlabels{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+.wxl{position:absolute;transform:translate(-50%,-50%);font:700 13px/1 "Space Grotesk",sans-serif;color:#0b0f1c;padding:3px 6px;border-radius:7px;box-shadow:0 1px 4px #0008;white-space:nowrap}
+.wxl small{font-weight:500;font-size:11px;opacity:.8;margin-left:3px}
+#wxfloat{position:fixed;left:max(2vw,12px);top:116px;z-index:4;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;backdrop-filter:blur(8px)}
+#wxfloat b{font-size:14px}#wxfloat .cap{margin:2px 0 0;display:block}
+@media(max-width:700px){#wxfloat{top:auto;bottom:66px;left:8px;width:200px;padding:8px 10px}#wxfloat .cap{display:none}}
 #tip{position:fixed;z-index:35;pointer-events:none;background:#0d1222f2;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;max-width:280px;transform:translate(14px,14px)}
 #tip b{display:block}#tip span{color:var(--dim);font-size:13px}
 .mkl{display:flex;flex-wrap:wrap;gap:6px}.mkl button{display:inline-flex;gap:6px;align-items:center;font-size:13px;min-height:36px;padding:0 10px}.mkl button:not(.on){opacity:.5}
@@ -141,6 +149,8 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
 <div id="loader"><div class="lcard"><div class="lname">Interactive <span>Galaxy</span></div><div class="lsub" id="lsub">Loading planets…</div><div class="lbar"><i id="lbar"></i></div></div></div>
 <div id="tour" hidden role="dialog" aria-label="Quick tour"><div id="ttext"></div><div class="trow"><span id="tstep"></span><button id="tskip">Skip</button><button id="tback">Back</button><button id="tnext" class="on">Next</button></div></div>
 <div id="tip" hidden></div>
+<div id="wxlabels" aria-hidden="true"></div>
+<div id="wxfloat" hidden><b id="wxft">Temperature now</b><div class="wxbar" id="wxbar2"></div><div class="wxticks" id="wxticks2"></div><span class="cap" id="wxfh">Hover the globe for the exact reading</span></div>
 <div id="toast" hidden><span id="toasttext"></span><button id="toastx" aria-label="Dismiss">×</button></div>
 <div id="hint">Live positions for right now · drag to orbit · scroll to zoom · click anything glowing</div>
 <aside id="info" aria-live="polite">
@@ -168,7 +178,10 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
     <div id="llerr" class="cap"></div>
     <div id="mkx" hidden><div class="sub">Map markers on the globe</div><div id="mklegend" class="mkl"></div><div class="cap">Hover a marker to see what it is. Click or tap it for details.</div></div>
     <div id="zoomx" hidden><div class="sub">Zoom in on this place</div><div class="frow"><button data-z="region">Region</button><button data-z="city">City</button><button data-z="street">Street</button></div><div id="detailcap" class="cap"></div></div>
-    <div id="wxx" hidden><div class="sub">Live weather on the globe</div><div class="frow"><button data-wx="clouds">Clouds</button><button data-wx="temp">Temperature</button><button data-wx="precip">Rain & snow</button><button data-wx="off">Off</button></div><div id="wxcap" class="cap"></div></div>
+    <div id="wxx" hidden><div class="sub">Live weather on the globe</div><div class="frow"><button data-wx="clouds">Clouds</button><button data-wx="temp">Temperature</button><button data-wx="precip">Rain & snow</button><button data-wx="off">Off</button></div>
+      <div id="wxkey" hidden><div class="wxbar" id="wxbar"></div><div class="wxticks" id="wxticks"></div><div class="wxwords"><span>Freezing</span><span>Cold</span><span>Mild</span><span>Warm</span><span>Hot</span></div>
+      <div class="frow"><button id="wxunit">Show °C</button></div></div>
+      <div id="wxcap" class="cap"></div></div>
     <div id="imgx" hidden><div class="sub">Earth imagery</div><div class="frow"><button data-img="map">Standard</button><button data-img="bm">Blue Marble</button><button data-img="yday">Yesterday from space</button></div></div>
   </div>
   <div class="frow" id="sharerow"><button id="copylink">Copy link to this</button><button id="sethome" hidden>Make this my home</button></div>
@@ -866,7 +879,7 @@ async function liveEarth(){const q=await getData('https://earthquake.usgs.gov/ea
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Freezing fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Heavy freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Rain showers',81:'Rain showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail'};
 async function loadWeather(o){o.wx=null;const j=await getData(`https://api.open-meteo.com/v1/forecast?latitude=${o.lat}&longitude=${o.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,cloud_cover,wind_speed_10m,precipitation&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`);
  FEED['weather']=!!j;feedMsg();if(!j||!j.current)return;if(j.timezone&&(!o.tz||o.tz.startsWith('Etc/')))o.tz=j.timezone;const c=j.current,C=f=>((f-32)*5/9).toFixed(0);
- o.wx=[['Weather now',WMO[c.weather_code]||'—'],['Temperature',`${c.temperature_2m.toFixed(0)} °F (${C(c.temperature_2m)} °C)`],['Feels like',`${c.apparent_temperature.toFixed(0)} °F`],['Wind',`${c.wind_speed_10m.toFixed(0)} mph`],['Humidity / clouds',`${c.relative_humidity_2m}% / ${c.cloud_cover}%`]];renderLive()}
+ const n=v=>typeof v==='number'&&!isNaN(v);o.wx=[['Weather now',WMO[c.weather_code]||'—'],n(c.temperature_2m)&&['Temperature',`${c.temperature_2m.toFixed(0)} °F (${C(c.temperature_2m)} °C)`],n(c.apparent_temperature)&&['Feels like',`${c.apparent_temperature.toFixed(0)} °F`],n(c.wind_speed_10m)&&['Wind',`${c.wind_speed_10m.toFixed(0)} mph`],n(c.relative_humidity_2m)&&['Humidity / clouds',`${c.relative_humidity_2m}% / ${c.cloud_cover??'—'}%`]].filter(Boolean);renderLive()}
 // ISS passes over a location
 function issPasses(o){const s=SATS[0];if(!s.satrec||!window.satellite)return '';const out=[];let cur=null;
  for(let t=Date.now(),end=t+3*864e5;t<end&&out.length<5;t+=20000){const l=issLook(o,t);if(!l)continue;if(l.el>0){if(!cur)cur={start:t,max:l.el,maxT:t};if(l.el>cur.max){cur.max=l.el;cur.maxT=t}}else if(cur){cur.end=t;if(cur.max>=10)out.push(cur);cur=null}}
@@ -915,19 +928,53 @@ async function loadWxGrid(){const pts=[];for(const la of WX_LATS)for(const lo of
  if(!ok)return;wxGrid=out;wxAt=Date.now();FEED['live weather layer']=true;feedMsg();paintWx();if(focus&&(focus.id==='earth'||focus.type==='loc'))$('wxx').hidden=false}
 function wxAtLL(lat,lon,key){const nl=WX_LONS.length,fy=(Math.max(-80,Math.min(80,lat))+80)/WX_STEP,fx=((lon+180)%360+360)%360/WX_STEP,y0=Math.min(WX_LATS.length-2,Math.floor(fy)),x0=Math.floor(fx)%nl,x1=(x0+1)%nl,ty=fy-y0,tx=fx-Math.floor(fx);
  const v=(y,x)=>{const c=wxGrid[y*nl+x];return c?(c[key]??0):0};return lerp(lerp(v(y0,x0),v(y0,x1),tx),lerp(v(y0+1,x0),v(y0+1,x1),tx),ty)}
-const tempRamp=t=>ramp(['#2b2fbf','#2f7fe0','#3fc6d9','#7fe07f','#f5e04a','#f59a2a','#e0362a','#8a1020'],(t+30)/75);
+// weather-map colours by °C: purple/blue = cold, green = mild, yellow → red = hot
+const TSTOPS=[[-40,'#3d1a6e'],[-25,'#6a3d9a'],[-12,'#3b5bdb'],[0,'#4dabf7'],[8,'#63e6be'],[16,'#94d82d'],[22,'#ffe066'],[28,'#ffa94d'],[34,'#f03e3e'],[42,'#a61e4d']];
+function tempRamp(t){if(t<=TSTOPS[0][0])return hex(TSTOPS[0][1]);for(let i=1;i<TSTOPS.length;i++)if(t<=TSTOPS[i][0]){const[a,ca]=TSTOPS[i-1],[b,cb]=TSTOPS[i];return mix(hex(ca),hex(cb),(t-a)/(b-a))}return hex(TSTOPS[TSTOPS.length-1][1])}
+let wxUnitF=(navigator.language||'').toLowerCase()==='en-us';
+const fmtT=c=>wxUnitF?`${Math.round(c*9/5+32)}°F`:`${Math.round(c)}°C`,fmtT2=c=>`${Math.round(c*9/5+32)}°F (${Math.round(c)}°C)`;
+function renderWxKey(){const lo=-40,hi=42,pct=t=>(t-lo)/(hi-lo)*100,grad='linear-gradient(90deg,'+TSTOPS.map(([t,c])=>`${c} ${pct(t).toFixed(1)}%`).join(',')+')';
+ const ticks=(wxUnitF?[-20,0,32,50,70,90].map(f=>[(f-32)*5/9,f+'°']):[-30,-15,0,15,30].map(c=>[c,c+'°'])).map(([c,l])=>`<span style="left:${pct(c)}%">${l}</span>`).join('');
+ for(const[b,t]of[['wxbar','wxticks'],['wxbar2','wxticks2']]){$(b).style.background=grad;$(t).innerHTML=ticks}
+ $('wxunit').textContent=wxUnitF?'Show °C':'Show °F';$('wxft').textContent=`Temperature now (${wxUnitF?'°F':'°C'})`;placeWxLabels(true)}
+$('wxunit').onclick=()=>{wxUnitF=!wxUnitF;renderWxKey()};
+// real current readings for major cities, shown as labels on the globe
+const WXC=[['New York',40.71,-74.01],['Los Angeles',34.05,-118.24],['Chicago',41.88,-87.63],['Miami',25.76,-80.19],['Denver',39.74,-104.99],['Seattle',47.61,-122.33],['Mexico City',19.43,-99.13],['Toronto',43.65,-79.38],['Anchorage',61.22,-149.9],['Honolulu',21.31,-157.86],['Bogotá',4.71,-74.07],['Lima',-12.05,-77.04],['São Paulo',-23.55,-46.63],['Buenos Aires',-34.6,-58.38],['Reykjavík',64.15,-21.94],['London',51.51,-.13],['Paris',48.86,2.35],['Madrid',40.42,-3.7],['Rome',41.9,12.5],['Berlin',52.52,13.4],['Moscow',55.76,37.62],['Cairo',30.04,31.24],['Lagos',6.52,3.38],['Nairobi',-1.29,36.82],['Johannesburg',-26.2,28.05],['Dubai',25.2,55.27],['Delhi',28.61,77.21],['Mumbai',19.08,72.88],['Beijing',39.9,116.41],['Tokyo',35.68,139.65],['Seoul',37.57,126.98],['Bangkok',13.76,100.5],['Singapore',1.35,103.82],['Jakarta',-6.21,106.85],['Sydney',-33.87,151.21],['Perth',-31.95,115.86],['Auckland',-36.85,174.76],['Yakutsk',62.03,129.73],['Nuuk',64.18,-51.72],['McMurdo (Antarctica)',-77.85,166.67]];
+let wxCity=[];
+async function loadWxCities(){const j=await getData(`https://api.open-meteo.com/v1/forecast?latitude=${WXC.map(c=>c[1]).join(',')}&longitude=${WXC.map(c=>c[2]).join(',')}&current=temperature_2m,precipitation,weather_code,cloud_cover`);
+ if(!j)return;const arr=Array.isArray(j)?j:[j];const box=$('wxlabels');box.innerHTML='';
+ wxCity=WXC.map(([n,la,lo],i)=>{const c=arr[i]&&arr[i].current;if(!c)return null;const el=document.createElement('div');el.className='wxl';el.hidden=true;box.appendChild(el);return{n,la,lo,c,el}}).filter(Boolean);placeWxLabels(true)}
+const WXSNOW=new Set([71,73,75,77,85,86]);
+function placeWxLabels(force){const show=wxGrid&&(wxMode==='temp'||wxMode==='precip')&&camera.position.distanceTo(worldPos(earthO))<45;
+ $('wxfloat').hidden=!(show&&wxMode==='temp');if(!wxCity.length)return;if(!show){wxCity.forEach(w=>w.el.hidden=true);return}
+ const ec=worldPos(earthO),W=innerWidth,H=innerHeight,placed=[];
+ for(const w of wxCity){const v=llLocal(w.la,w.lo,ER*1.01).applyQuaternion(earthMesh.quaternion).add(ec),n=v.clone().sub(ec).normalize(),toCam=camera.position.clone().sub(v).normalize();
+  let txt=null,bg='';if(wxMode==='temp'){txt=fmtT(w.c.temperature_2m);const[r,g,b]=tempRamp(w.c.temperature_2m);bg=`rgb(${r|0},${g|0},${b|0})`}
+  else if(w.c.precipitation>0||[51,53,55,61,63,65,66,67,80,81,82,95,96,99,71,73,75,77,85,86].includes(w.c.weather_code)){const sn=WXSNOW.has(w.c.weather_code)||(w.c.temperature_2m<=0);txt=sn?'Snow':'Rain';bg=sn?'#f1f3f5':'#74c0fc'}
+  const p=v.clone().project(camera),sx=(p.x+1)/2*W,sy=(1-p.y)/2*H;
+  const ok=txt&&n.dot(toCam)>.2&&p.z<1&&sx>0&&sx<W&&sy>0&&sy<H&&!placed.some(q=>Math.abs(q[0]-sx)<54&&Math.abs(q[1]-sy)<22);
+  if(!ok){w.el.hidden=true;continue}placed.push([sx,sy]);w.el.hidden=false;w.el.style.left=sx+'px';w.el.style.top=sy+'px';w.el.style.background=bg;
+  if(force||w.el.dataset.t!==txt+w.n){w.el.dataset.t=txt+w.n;w.el.innerHTML=`${txt}<small>${w.n}</small>`}}}
+// what the weather layer says at any point under the mouse
+function wxReadout(e){if(!wxGrid||wxMode==='off'||camera.position.distanceTo(worldPos(earthO))>45)return null;const r=canvas.getBoundingClientRect();
+ mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);const h=ray.intersectObject(earthMesh,false)[0];if(!h)return null;
+ const[la,lo]=localLL(h.point.clone().sub(worldPos(earthO))),t=wxAtLL(la,lo,'temperature_2m'),cc=wxAtLL(la,lo,'cloud_cover'),pr=wxAtLL(la,lo,'precipitation');
+ return`<b>About ${fmtT2(t)}</b><span>${fmtLL(la,lo)} · clouds ${Math.round(cc)}% · ${pr>.05?(t<=0?'snowing':'raining')+` ${pr.toFixed(1)} mm/h`:'no rain or snow'}</span>`}
 function paintWx(){const cl=BODIES.find(b=>b.id==='earth')._cl;if(!cl)return;if(wxMode==='off'){cl.visible=false;return}cl.visible=true;if(!wxGrid)return;
  const W=720,H=360,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d'),im=g.createImageData(W,H),d=im.data;
  for(let j=0;j<H;j++){const lat=90-(j+.5)/H*180,lr=lat*D2R,cl_=Math.cos(lr),sy=Math.sin(lr);for(let i=0;i<W;i++){const lon=(i+.5)/W*360-180,lo=(lon+180)*D2R,x=cl_*Math.cos(lo)+2,y=sy+2,z=cl_*Math.sin(lo)+2,k=(j*W+i)*4;let r,gg,b,a;
   if(wxMode==='clouds'){const cc=wxAtLL(lat,lon,'cloud_cover')/100,pr=wxAtLL(lat,lon,'precipitation'),n=fbm(x*5,y*5,z*5,4,60),q=sm(.2,.85,cc+(n-.5)*.7);r=gg=b=255;a=q*225+Math.min(1,pr/3)*25;if(pr>.5){r=gg=232;b=240}}
-  else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=105}
+  else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=160}
   else{const pr=wxAtLL(lat,lon,'precipitation'),t=wxAtLL(lat,lon,'temperature_2m'),q=sm(.05,4,pr);[r,gg,b]=t<0?[235,245,255]:[60,140,255];a=q*210}
   d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=a}}
- g.putImageData(im,0,0);cl.material.map=new THREE.CanvasTexture(cv);cl.material.alphaMap=null;cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;
- $('wxcap').textContent=`${wxMode==='clouds'?'Real cloud cover':wxMode==='temp'?'Air temperature (blue cold → red hot)':'Rain (blue) and snow (white) falling now'} from Open-Meteo on a ${WX_STEP}° grid, updated ${new Date(wxAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Refreshes every 30 minutes.`}
+ g.putImageData(im,0,0);const tx=new THREE.CanvasTexture(cv);cl.material.map=tx;cl.material.alphaMap=null;
+ // temperature and rain colours are drawn unlit, so they read the same on the day and night sides
+ if(wxMode==='clouds'){cl.material.emissive=new THREE.Color(0,0,0);cl.material.emissiveMap=null}else{cl.material.emissive=new THREE.Color(1,1,1);cl.material.emissiveMap=tx;cl.material.emissiveIntensity=.8}
+ cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;$('wxkey').hidden=wxMode!=='temp';placeWxLabels(true);
+ $('wxcap').textContent=`${wxMode==='clouds'?'Real cloud cover':wxMode==='temp'?'Air temperature near the ground. City labels are real current readings; colours between cities are estimated':'Rain (blue) and snow (white) falling now'} from Open-Meteo on a ${WX_STEP}° grid, updated ${new Date(wxAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Refreshes every 30 minutes.`}
 document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{wxMode=b.dataset.wx;document.querySelectorAll('[data-wx]').forEach(x=>x.classList.toggle('on',x===b));paintWx()});
 document.querySelector('[data-wx=clouds]').classList.add('on');
-loadWxGrid();setInterval(loadWxGrid,30*60*1000);
+renderWxKey();loadWxGrid();loadWxCities();setInterval(()=>{loadWxGrid();loadWxCities()},30*60*1000);
 
 
 /* ---------- #1 photo-real surfaces ---------- */
@@ -1163,7 +1210,8 @@ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null;
 canvas.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];$('tip').hidden=true});
 const SMALL=['quake','event','launch','sat','nat','loc'];
 function nearestSmall(x,y,max){let best=null,bd=max;for(const o of objects){if(!o._s||!SMALL.includes(o.type)||o.obj.visible===false)continue;const d=Math.hypot(o._s[0]-x,o._s[1]-y);if(d<bd){bd=d;best=o}}return best}
-canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||e.buttons){$('tip').hidden=true;return}const o=nearestSmall(e.clientX,e.clientY,16)||(()=>{let b=null,bd=14;for(const x of objects){if(!x._s||x.obj.visible===false)continue;const d=Math.hypot(x._s[0]-e.clientX,x._s[1]-e.clientY);if(d<bd){bd=d;b=x}}return b})();
+canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||e.buttons){$('tip').hidden=true;return}const o0=nearestSmall(e.clientX,e.clientY,16);if(!o0){const wr=wxReadout(e);if(wr){const t=$('tip');t.innerHTML=wr;t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';t.hidden=false;canvas.style.cursor='crosshair';return}}
+ const o=o0||(()=>{let b=null,bd=14;for(const x of objects){if(!x._s||x.obj.visible===false)continue;const d=Math.hypot(x._s[0]-e.clientX,x._s[1]-e.clientY);if(d<bd){bd=d;b=x}}return b})();
  const t=$('tip');if(!o){t.hidden=true;canvas.style.cursor='';return}canvas.style.cursor='pointer';
  t.innerHTML=`<b>${String(o.name).replace(/</g,'&lt;')}</b><span>${String(o.kind||'').replace(/</g,'&lt;')} · click for details</span>`;t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';t.hidden=false});
 canvas.addEventListener('pointerleave',()=>$('tip').hidden=true);
@@ -1279,7 +1327,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
  {const dcam=camera.position.distanceTo(controls.target),nr=Math.max(1e-5,Math.min(.05,dcam*.05));if(Math.abs(nr-camera.near)/camera.near>.2){camera.near=nr;camera.updateProjectionMatrix()}}
  if(MARKERS.length){const de=camera.position.distanceTo(worldPos(earthO));if(Math.abs(de-(window.__mkD||0))>.002){window.__mkD=de;for(const m of MARKERS){const k=Math.min(m.userData.base,Math.max(.003,(de-ER)*.03));m.scale.set(k,k,1)}}}
  if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=REDUCED?.6:.35+.35*Math.sin(performance.now()/300)}
- controls.update();updateEarthSun();updateSkyFade();
+ controls.update();updateEarthSun();updateSkyFade();placeWxLabels(false);
  if(window.__earthReal&&showLights){const ds=camera.position.distanceTo(worldPos(earthO))-ER;earthMesh.material.emissiveIntensity=1.7*Math.max(.15,Math.min(1,(ds-.02)/.3))}if(Math.abs(simMs-trackAt)>(live?20000:rate*0.5*1000+60000))updateTrack();renderer.render(scene,camera);
  if(performance.now()-lastUI>250){lastUI=performance.now();
   $('when').textContent=new Date(simMs).toLocaleString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
@@ -1298,7 +1346,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
    if(o.type==='gal'&&cd<3000&&o.id!=='andromeda')show=false;
    if(o.type==='star'&&camera.position.distanceTo(controls.target)<80)show=false;
    if(o===earthO&&focus&&['loc','quake','event','launch'].includes(focus.type))show=false;
-   if(show&&(o.type==='quake'||o.type==='event'))show=false;if(show){placed.push([sx,sy]);o.el.style.display='';o.el.style.left=sx+'px';o.el.style.top=sy+'px'}else o.el.style.display='none'}}
+   if(show&&(o.type==='quake'||o.type==='event'||o.type==='launch'))show=false;if(show){placed.push([sx,sy]);o.el.style.display='';o.el.style.left=sx+'px';o.el.style.top=sy+'px'}else o.el.style.display='none'}}
  else for(const o of objects){worldPos(o,v3);const p=v3.clone().project(camera);o._s=p.z<1&&o.obj.visible!==false&&(nearEarth||!['sat','nat','loc','quake','event','launch'].includes(o.type))?[(p.x+1)/2*innerWidth,(1-p.y)/2*innerHeight]:null}
 }
 frame();
