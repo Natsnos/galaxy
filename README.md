@@ -4,7 +4,8 @@ A live, interactive 3D model of the Solar System and the Milky Way. Live site: *
 
 ## What it does
 - **Real-time positions.** The Sun, the planets (from NASA/JPL orbital elements), the Moon, Jupiter's moons and the comets are placed for the current moment. Earth spins using the official IAU rotation model, so day and night match reality.
-- **Photo-real surfaces.** Real planet maps, plus Earth's city lights on the night side, shiny oceans, an atmosphere glow and an all-sky Milky Way photo aligned to the true galactic orientation.
+- **Photo-real surfaces.** Real planet maps, plus a 4K Earth on desktop with city lights on the night side, shiny oceans and an atmosphere glow. Saturn's rings cast shadows, and an all-sky Milky Way photo is aligned to the true galactic orientation.
+- **Moons and eclipses.** There are 21 major moons, including Jupiter's four (positioned with Meeus's theory) and Phobos, Enceladus, Triton and Charon. Solar eclipses put the Moon's shadow on Earth, within about 150 km of NASA's path for 2 Aug 2027. Lunar eclipses turn the Moon red.
 - **Search anything.** Search for an address, a place or a planet. You fly there with real satellite imagery and get a Google Maps view, local time, weather and ISS passes.
 - **Live data:**
   - live weather on the globe, plus weather for any place
@@ -16,6 +17,9 @@ A live, interactive 3D model of the Solar System and the Milky Way. Live site: *
   - ISS pass alerts for your home
 - **Sky view, events and time travel.** Sky view shows the sky above any place, and Events lists eclipses and meteor showers. You can pause, rewind or fast-forward time.
 - **Shareable links.** For example `#mars`, `#iss`, `#events`, or `#place-407128n-740060w-new-york`.
+
+## Keyboard
+`/` search · `Space` pause · `N` back to now · `+` and `−` change speed · `Esc` close
 
 ## Credits
 - **Planet, Sun, Saturn ring and Milky Way maps:** [Solar System Scope](https://www.solarsystemscope.com/textures/), licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The maps are based on NASA data.

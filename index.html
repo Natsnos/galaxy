@@ -111,11 +111,12 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
   #info.open~#ctl{display:none}
   #clock{font-size:15px}
 }
-@media(prefers-reduced-motion:reduce){#info{transition:none}}
+@media(prefers-reduced-motion:reduce){#info{transition:none}#loader{transition:none}.lbar i{transition:none}}
+@media(pointer:coarse){button,select,input[type=datetime-local],#q,#ll{min-height:44px}}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="c" role="img" aria-label="3D view of the Solar System and Milky Way. Use the search box or the Go to menu to pick an object."></canvas>
 <div id="labels"></div>
 <header>
   <h1>Interactive <span>Galaxy</span></h1>
@@ -194,7 +195,7 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
   </div>
   <div id="feeds" class="cap" style="margin:0"></div>
   <div id="isshome" class="cap" style="margin:0"></div>
-  <div class="credits">Planet maps: Solar System Scope (CC BY 4.0) · Earth maps: NASA via three.js · Imagery: Esri, NASA GIBS · Data: NASA, NOAA, USGS, CelesTrak, Open-Meteo, OpenStreetMap, The Space Devs</div>
+  <div class="credits">Keys: / search · Space pause · N now · + and − change speed · Esc close.<br>Planet maps: Solar System Scope (CC BY 4.0) · Earth maps: NASA via three.js · Imagery: Esri, NASA GIBS · Data: NASA, NOAA, USGS, CelesTrak, Open-Meteo, OpenStreetMap, The Space Devs</div>
   </div>
 </div>
 
@@ -331,6 +332,7 @@ function moonGeo(ms){const d=jd(ms)-2451543.5,n=x=>((x%360)+360)%360;
  lon+=-1.274*s(Mm-2*D)+0.658*s(2*D)-0.186*s(Mr)-0.059*s(2*Mm-2*D)-0.057*s(Mm-2*D+Mr)+0.053*s(Mm+2*D)+0.046*s(2*D-Mr)+0.041*s(Mm-Mr)-0.035*s(D)-0.031*s(Mm+Mr);
  lat+=-0.173*s(F-2*D)-0.055*s(Mm-F-2*D)-0.046*s(Mm+F-2*D)+0.033*s(F+2*D)+0.017*s(2*Mm+F);
  r+=-0.58*Math.cos(Mm-2*D)-0.46*Math.cos(2*D);
+ lon-=1.396971*(d-1.5)/36525;
  const lo=lon*D2R,la=lat*D2R;return{v:[Math.cos(la)*Math.cos(lo),Math.cos(la)*Math.sin(lo),Math.sin(la)],km:r*6371}}
 // orientation quaternion from IAU model; sphere local X = prime meridian, Y = north pole
 const mBasis=new THREE.Matrix4();
@@ -378,7 +380,11 @@ Object.assign(SHADERS,{
  europa:(x,y,z)=>{const n=fbm(x*3,y*3,z*3,4,52),l=Math.abs(Math.sin(fbm(x*4,y*4,z*4,4,53)*40));return mix(ramp(['#c9b9a0','#e8dfcf','#f6f1e8'],n),[150,95,60],(1-sm(0,.12,l))*.7)},
  ganymede:(x,y,z)=>{const n=fbm(x*4,y*4,z*4,6,54),m=fbm(x*1.5,y*1.5,z*1.5,3,55);return mix(ramp(['#6e6258','#9a8f84','#c9c0b5'],n),[90,80,70],sm(.5,.6,m)*.6)},
  callisto:(x,y,z)=>{const n=fbm(x*6,y*6,z*6,5,56);let c=ramp(['#3a3530','#5c5248','#7d7266'],n);if(vnoise(x*60,y*60,z*60,57)>.9)c=[220,215,205];return c},
- titan:(x,y,z,lat)=>ramp(['#b8742e','#d89a48','#e8b866'],.5+fbm(x*2,y*6,z*2,3,58)*.3+lat*.1)});
+ titan:(x,y,z,lat)=>ramp(['#b8742e','#d89a48','#e8b866'],.5+fbm(x*2,y*6,z*2,3,58)*.3+lat*.1),
+ ice:(x,y,z)=>{const n=fbm(x*5,y*5,z*5,5,61);return mix(ramp(['#cfd6dc','#e9eef2','#ffffff'],n),[150,175,200],(1-sm(0,.1,Math.abs(Math.sin(fbm(x*3,y*3,z*3,3,62)*30))))*.5)},
+ rock:(x,y,z)=>ramp(['#3d3631','#5e544b','#7a6f64'],fbm(x*6,y*6,z*6,5,63)),
+ triton:(x,y,z,lat)=>{const n=fbm(x*5,y*5,z*5,5,64);let c=ramp(['#9b8a86','#c9b6ae','#efe2da'],n);if(lat<-.2)c=mix(c,[240,220,215],.5);return c},
+ grey:(x,y,z)=>ramp(['#55524f','#86817c','#b4aea7'],fbm(x*5,y*5,z*5,5,65))});
 const texCache={};
 function makeTex(name,W=512,H=256){
  if(texCache[name])return texCache[name];
@@ -626,9 +632,30 @@ const MOONS=[
  {id:'europa',host:'jupiter',name:'Europa',r:.28,d:11.5,tex:'europa',facts:[['Diameter','3,122 km'],['Orbit','3.55 days'],['Distance from Jupiter','671,000 km'],['Notable','Global salty ocean under the ice']],desc:'Beneath its cracked ice shell lies an ocean holding about twice the water of Earth’s oceans. NASA’s Europa Clipper is on its way there.',wiki:'Europa_(moon)',q:'europa moon'},
  {id:'ganymede',host:'jupiter',name:'Ganymede',r:.45,d:14,tex:'ganymede',facts:[['Diameter','5,268 km'],['Orbit','7.15 days'],['Distance from Jupiter','1,070,400 km'],['Notable','Largest moon in the Solar System']],desc:'Bigger than Mercury and the only moon with its own magnetic field. ESA’s JUICE spacecraft will orbit it in the 2030s.',wiki:'Ganymede_(moon)',q:'ganymede'},
  {id:'callisto',host:'jupiter',name:'Callisto',r:.42,d:18,tex:'callisto',facts:[['Diameter','4,821 km'],['Orbit','16.7 days'],['Distance from Jupiter','1,882,700 km'],['Notable','One of the most cratered surfaces known']],desc:'An ancient, battered surface that has barely changed in four billion years.',wiki:'Callisto_(moon)',q:'callisto'},
- {id:'titan',host:'saturn',name:'Titan',r:.42,d:13,tex:'titan',approx:true,facts:[['Diameter','5,150 km'],['Orbit','15.9 days'],['Distance from Saturn','1,221,870 km'],['Notable','Thick atmosphere and methane lakes']],desc:'The only moon with a thick atmosphere, and the only other world known to have liquid lakes on its surface, filled with methane and ethane. NASA’s Dragonfly rotorcraft is headed there. Its position along the orbit here is approximate.',wiki:'Titan_(moon)',q:'titan cassini'}];
+ {id:'titan',host:'saturn',name:'Titan',r:.42,d:17.6,tex:'titan',approx:true,facts:[['Diameter','5,150 km'],['Orbit','15.9 days'],['Distance from Saturn','1,221,870 km'],['Notable','Thick atmosphere and methane lakes']],desc:'The only moon with a thick atmosphere, and the only other world known to have liquid lakes on its surface, filled with methane and ethane. NASA’s Dragonfly rotorcraft is headed there. Its position along the orbit here is approximate.',wiki:'Titan_(moon)',q:'titan cassini'}];
+// more moons: [id,name,host,semi-major axis km,period days,diameter km,texture,retrograde,blurb,wiki]
+const HOSTR={mars:3390,saturn:58232,uranus:25362,neptune:24622,pluto:1188};
+[['phobos','Phobos','mars',9376,.3189,22.5,'rock',0,'A lumpy little moon spiralling slowly inward. In about 50 million years it will crash into Mars or break into a ring.','Phobos_(moon)'],
+ ['deimos','Deimos','mars',23463,1.263,12.4,'rock',0,'Mars’s smaller, outer moon. From Mars it looks like a bright star.','Deimos_(moon)'],
+ ['mimas','Mimas','saturn',185539,.942,396,'grey',0,'Its giant Herschel crater makes it look like the Death Star.','Mimas_(moon)'],
+ ['enceladus','Enceladus','saturn',237948,1.370,504,'ice',0,'Shoots geysers of water from an ocean under its ice. It’s the shiniest object in the Solar System.','Enceladus'],
+ ['tethys','Tethys','saturn',294619,1.888,1062,'ice',0,'Made almost entirely of water ice, with a canyon 2,000 km long.','Tethys_(moon)'],
+ ['dione','Dione','saturn',377396,2.737,1123,'grey',0,'An icy world streaked with bright ice cliffs.','Dione_(moon)'],
+ ['rhea','Rhea','saturn',527108,4.518,1527,'grey',0,'Saturn’s second-largest moon, a cold, cratered ball of ice and rock.','Rhea_(moon)'],
+ ['iapetus','Iapetus','saturn',3560820,79.32,1469,'grey',0,'Two-toned: one side is as dark as coal and the other as bright as snow. A ridge runs around its middle like a walnut seam.','Iapetus_(moon)'],
+ ['miranda','Miranda','uranus',129390,1.413,471,'grey',0,'Has the tallest cliff known, Verona Rupes, about 20 km high.','Miranda_(moon)'],
+ ['ariel','Ariel','uranus',191020,2.520,1158,'ice',0,'The brightest of Uranus’s big moons, crossed by deep valleys.','Ariel_(moon)'],
+ ['umbriel','Umbriel','uranus',266000,4.144,1169,'rock',0,'The darkest of Uranus’s large moons.','Umbriel_(moon)'],
+ ['titania','Titania','uranus',435910,8.706,1577,'grey',0,'Uranus’s largest moon, named after the fairy queen in Shakespeare’s A Midsummer Night’s Dream.','Titania_(moon)'],
+ ['oberon','Oberon','uranus',583520,13.46,1523,'grey',0,'The outermost of Uranus’s big moons, heavily cratered.','Oberon_(moon)'],
+ ['triton','Triton','neptune',354759,5.877,2707,'triton',1,'Orbits backwards, so it was probably a captured Kuiper Belt world. It has nitrogen geysers and is one of the coldest places known.','Triton_(moon)'],
+ ['charon','Charon','pluto',19591,6.387,1212,'grey',0,'Half Pluto’s size. Pluto and Charon orbit a point between them, like a double planet.','Charon_(moon)']]
+.forEach(([id,name,host,a,P,dia,tex,retro,blurb,wiki])=>{const hb=BODIES.find(b=>b.id===host),R=HOSTR[host];
+ MOONS.push({id,host,name,P,retro,approx:true,tex,d:hb.r*(1.3+.55*Math.sqrt(a/R)),r:Math.max(.07,Math.min(.42,hb.r*dia/(2*R)*2.2)),
+  facts:[['Diameter',dia.toLocaleString()+' km'],['Orbit',P<1?(P*24).toFixed(1)+' hours':P.toFixed(P<10?2:1)+' days'+(retro?' (backwards)':'')],[`Distance from ${host[0].toUpperCase()+host.slice(1)}`,a.toLocaleString()+' km']],
+  desc:blurb+' Its position along its orbit here is approximate.',wiki,q:name+' moon'})});
 for(const m of MOONS){const host=objects.find(o=>o.id===m.host);const mesh=new THREE.Mesh(new THREE.SphereGeometry(m.r,32,16),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(makeTex(m.tex,256,128).cv),roughness:1}));
- host.obj.add(mesh);m.mesh=mesh;const N=m.host==='jupiter'?radec(268.056595,64.495303):radec(40.589,83.537),e1=new THREE.Vector3(1,0,0).cross(N).normalize(),e2=N.clone().cross(e1);m.N=N;
+ host.obj.add(mesh);m.mesh=mesh;const N=radec(ROT[m.host][0],ROT[m.host][1]),e1=new THREE.Vector3(1,0,0).cross(N).normalize(),e2=N.clone().cross(e1);m.N=N;
  const pts=[];for(let i=0;i<=128;i++){const t=i/128*Math.PI*2;pts.push(e1.clone().multiplyScalar(Math.cos(t)*m.d).add(e2.clone().multiplyScalar(Math.sin(t)*m.d)))}
  const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x5a6680,transparent:true,opacity:.3}));host.obj.add(ln);orbitLines.push(ln);
  reg({...m,kind:`Moon of ${m.host[0].toUpperCase()+m.host.slice(1)}`},mesh,'body',2.4,mesh)}
@@ -637,6 +664,7 @@ function updateMoons(ms){const d=dJ(ms),V=172.74+0.00111588*d,M=357.529+0.985600
  const A=1.915*sD(M)+0.020*sD(2*M),B=5.555*sD(N)+0.168*sD(2*N),K=J+A-B,R=1.00014-0.01671*cD(M)-0.00014*cD(2*M),r=5.20872-0.25208*cD(N)-0.00611*cD(2*N);
  const De=Math.sqrt(r*r+R*R-2*r*R*cD(K)),psi=Math.asin(R/De*sD(K))/D2R,t=d-De/173;
  const U={io:163.8069+203.4058646*t,europa:358.4140+101.2916335*t,ganymede:5.7176+50.2345180*t,callisto:224.8092+21.4879800*t,titan:261.6+22.5769768*d};
+ for(const m of MOONS)if(U[m.id]===undefined)U[m.id]=(h3(m.id.length*97,m.id.charCodeAt(0),m.id.charCodeAt(1),7)*360)+(m.retro?-1:1)*360/m.P*d;
  for(const m of MOONS){const H=HP[m.host],away=eclToThree(H[0]-HP.earth[0],H[1]-HP.earth[1],H[2]-HP.earth[2]).normalize();away.sub(m.N.clone().multiplyScalar(away.dot(m.N))).normalize();
   const u=(U[m.id]+(m.host==='jupiter'?psi-B:0))*D2R,perp=m.N.clone().cross(away);m.mesh.position.copy(away.multiplyScalar(Math.cos(u)*m.d).add(perp.multiplyScalar(Math.sin(u)*m.d)));m.mesh.rotation.y=-u}}
 
@@ -843,7 +871,7 @@ function paintWx(){const cl=BODIES.find(b=>b.id==='earth')._cl;if(!cl)return;if(
   else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=150}
   else{const pr=wxAtLL(lat,lon,'precipitation'),t=wxAtLL(lat,lon,'temperature_2m'),q=sm(.05,4,pr);[r,gg,b]=t<0?[235,245,255]:[60,140,255];a=q*210}
   d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=a}}
- g.putImageData(im,0,0);cl.material.map=new THREE.CanvasTexture(cv);cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;
+ g.putImageData(im,0,0);cl.material.map=new THREE.CanvasTexture(cv);cl.material.alphaMap=null;cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;
  $('wxcap').textContent=`${wxMode==='clouds'?'Real cloud cover':wxMode==='temp'?'Air temperature (blue cold → red hot)':'Rain (blue) and snow (white) falling now'} from Open-Meteo on a ${WX_STEP}° grid, updated ${new Date(wxAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Refreshes every 30 minutes.`}
 document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{wxMode=b.dataset.wx;document.querySelectorAll('[data-wx]').forEach(x=>x.classList.toggle('on',x===b));paintWx()});
 document.querySelector('[data-wx=clouds]').classList.add('on');
@@ -858,7 +886,7 @@ const maxAniso=renderer.capabilities&&renderer.capabilities.getMaxAnisotropy?ren
 function toTex(img){const t=new THREE.Texture(img);t.anisotropy=Math.min(8,maxAniso);t.needsUpdate=true;return t}
 function cachePixels(key,img){try{const W=1024,H=512,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(img,0,0,W,H);texCache[key]={cv:c,data:g.getImageData(0,0,W,H).data,W,H}}catch(e){}}
 const REALMAP={mercury:'2k_mercury.jpg',mars:'2k_mars.jpg',jupiter:'2k_jupiter.jpg',saturn:'2k_saturn.jpg',uranus:'2k_uranus.jpg',neptune:'2k_neptune.jpg',moon:'moon_1024.jpg'};
-for(const st of planetState){const f=REALMAP[st.b.id];if(!f)continue;loadImg(f).then(img=>{if(!img)return;st.mesh.material.map=toTex(img);st.mesh.material.needsUpdate=true;cachePixels(st.b.tex,img)})}
+for(const st of planetState){const f=REALMAP[st.b.id];if(!f)continue;loadImg(f).then(img=>{if(!img)return;st.mesh.material.map=toTex(img);if(st.b.id==='uranus')st.mesh.material.color=new THREE.Color(.78,.82,.84);st.mesh.material.needsUpdate=true;cachePixels(st.b.tex,img)})}
 loadImg('2k_sun.jpg').then(img=>{if(!img)return;sunMat.map=toTex(img);sunMat.needsUpdate=true;cachePixels('sun',img)});
 {const sat=BODIES.find(b=>b.id==='saturn');loadImg('2k_saturn_ring_alpha.png').then(img=>{if(!img||!sat._ring)return;sat._ring.material.map=toTex(img);sat._ring.material.needsUpdate=true})}
 // a softer, larger corona around the Sun
@@ -873,17 +901,42 @@ function atmoMat(back){return new THREE.ShaderMaterial({uniforms:{sunDirV:earthS
  'float lit=smoothstep(-0.45,0.35,dot(vN,sunDirV));gl_FragColor=vec4(vec3(0.32,0.6,1.0)*a*(0.12+0.95*lit),1.0);}'})}
 {const eb=BODIES.find(b=>b.id==='earth'),haze=new THREE.Mesh(new THREE.SphereGeometry(ER*1.015,64,32),atmoMat(false)),halo=new THREE.Mesh(new THREE.SphereGeometry(ER*1.09,64,32),atmoMat(true));
  earthMesh.add(haze);earthMesh.add(halo);halo.renderOrder=-1;
- Promise.all(['earth_atmos_2048.jpg','earth_normal_2048.jpg','earth_specular_2048.jpg','earth_lights_2048.png','earth_clouds_1024.png'].map(loadImg)).then(([day,nrm,spec,lights,clouds])=>{
+ const BIG=innerWidth>900&&!matchMedia('(pointer:coarse)').matches;
+ Promise.all([BIG?'earth_atmos_4096.jpg':'earth_atmos_2048.jpg','earth_normal_2048.jpg','earth_specular_2048.jpg','earth_lights_2048.png',BIG?'earth_clouds_2048_alpha.jpg':'earth_clouds_1024.png'].map(loadImg)).then(([day,nrm,spec,lights,clouds])=>{
   if(eb._atm)eb._atm.visible=false;
   if(!day){loadVectorMap();return}
   window.__earthReal=true;const m=new THREE.MeshPhongMaterial({map:toTex(day),specular:new THREE.Color(0x2a323a),shininess:30});
   if(nrm){m.normalMap=toTex(nrm);m.normalScale=new THREE.Vector2(.85,.85)}if(spec)m.specularMap=toTex(spec);
   if(lights){m.emissiveMap=toTex(lights);m.emissive=new THREE.Color(0xffd08a);m.emissiveIntensity=showLights?1.7:0;cityLights.visible=false}
-  m.onBeforeCompile=sh=>{sh.uniforms.sunDirV=earthSunU;sh.fragmentShader='uniform vec3 sunDirV;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance*=smoothstep(0.1,-0.22,dot(normalize(vNormal),sunDirV));')};
+  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,{sunDirV:earthSunU,eclDirV:ECL.dir,eclR:ECL.r,eclK:ECL.k});sh.fragmentShader='uniform vec3 sunDirV;uniform vec3 eclDirV;uniform float eclR;uniform float eclK;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance*=smoothstep(0.1,-0.22,dot(normalize(vNormal),sunDirV));')
+   .replace('#include <dithering_fragment>','{float ang=acos(clamp(dot(normalize(vNormal),eclDirV),-1.0,1.0));float q=1.0-smoothstep(0.0,eclR,ang);gl_FragColor.rgb*=1.0-eclK*(0.82*pow(q,0.55)+0.15*(1.0-smoothstep(0.0,0.06,ang)));}\n#include <dithering_fragment>')};
   earthMesh.material=m;mapTex=m.map;cachePixels('earth',day);
-  if(clouds)cachePixels('clouds',clouds);if(clouds&&!wxGrid&&eb._cl){eb._cl.material.map=toTex(clouds);eb._cl.material.opacity=.9;eb._cl.material.needsUpdate=true}
+  if(clouds){cachePixels('clouds',clouds);if(BIG&&texCache.clouds){const d=texCache.clouds.data;for(let k=0;k<d.length;k+=4){d[k+3]=d[k];d[k]=d[k+1]=d[k+2]=255}}}
+  if(eb._cl)eb._cl.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,{eclDirV:ECL.dir,eclR:ECL.r,eclK:ECL.k});sh.fragmentShader='uniform vec3 eclDirV;uniform float eclR;uniform float eclK;\n'+sh.fragmentShader.replace('#include <dithering_fragment>','{float ang=acos(clamp(dot(normalize(vNormal),eclDirV),-1.0,1.0));float q=1.0-smoothstep(0.0,eclR,ang);gl_FragColor.rgb*=1.0-eclK*(0.82*pow(q,0.55)+0.15*(1.0-smoothstep(0.0,0.06,ang)));}\n#include <dithering_fragment>')};
+  if(clouds&&!wxGrid&&eb._cl){const cm=eb._cl.material;if(BIG){cm.map=null;cm.alphaMap=toTex(clouds);cm.color=new THREE.Color(1,1,1)}else cm.map=toTex(clouds);cm.opacity=.92;cm.needsUpdate=true}
   if(focus&&(focus.id==='earth'||focus.type==='loc'))portrait(focus)})}
-function updateEarthSun(){const e=worldPos(earthO),sdir=e.clone().negate().normalize();camera.updateMatrixWorld();earthSunU.value.copy(sdir).transformDirection(camera.matrixWorldInverse)}
+const ECL={dir:{value:new THREE.Vector3(1,0,0)},r:{value:.5},k:{value:0}},ECLW=new THREE.Vector3();let eclInfo=null,lunInfo=null;
+function updateEclipses(){if(!HP.earth||!moonNow)return;const AUkm=149597870.7,Re=6371,Rm=1737.4,Rs=696000,E=HP.earth;
+ const S=[-E[0]*AUkm,-E[1]*AUkm,-E[2]*AUkm],M=moonNow.v.map(x=>x*moonNow.km),DM=[M[0]-S[0],M[1]-S[1],M[2]-S[2]],dSM=Math.hypot(...DM),D=DM.map(x=>x/dSM);
+ const b=M[0]*D[0]+M[1]*D[1]+M[2]*D[2],c=M[0]*M[0]+M[1]*M[1]+M[2]*M[2]-Re*Re,h=b*b-c;let t=h>=0?-b-Math.sqrt(h):-b;const P=[M[0]+D[0]*t,M[1]+D[1]*t,M[2]+D[2]*t],pl=Math.hypot(...P);
+ const rp=Rm+t*(Rs+Rm)/dSM,ru=Rm-t*(Rs-Rm)/dSM;let k=0;if(t>0)k=h>=0?1:Math.max(0,1-(pl-Re)/rp);
+ ECL.k.value=k;ECL.r.value=Math.min(1.4,rp/Re);ECLW.copy(eclToThree(P[0]/pl,P[1]/pl,P[2]/pl));
+ eclInfo=k>0?{total:h>=0&&ru>0,annular:h>=0&&ru<=0,on:h>=0,dirW:ECLW.clone(),k}:null;
+ const dES=Math.hypot(...E)*AUkm,anti=E.map(x=>x/Math.hypot(...E)),cs=moonNow.v[0]*anti[0]+moonNow.v[1]*anti[1]+moonNow.v[2]*anti[2],sep=moonNow.km*Math.sqrt(Math.max(0,1-cs*cs));
+ const uR=Re-moonNow.km*(Rs-Re)/dES,pR=Re+moonNow.km*(Rs+Re)/dES,fu=cs>0?Math.max(0,Math.min(1,(uR+Rm-sep)/(2*Rm))):0,fp=cs>0?Math.max(0,Math.min(1,(pR+Rm-sep)/(2*Rm))):0;
+ lunInfo=fp>0?{fu,fp}:null;const mm=moonState&&moonState.mesh.material;if(mm&&mm.color){mm.color.setRGB(1-.42*fu,1-.78*fu,1-.88*fu);mm.color.multiplyScalar(1-.35*fp*(1-fu))}}
+const moonState=planetState.find(s=>s.b.id==='moon');
+window.__galaxyDebug={eclipse:()=>eclInfo&&{ll:localLL(eclInfo.dirW),k:eclInfo.k,total:eclInfo.total,annular:eclInfo.annular,on:eclInfo.on},lunar:()=>lunInfo,
+ sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};
+// Saturn: ring shadow on the planet, planet shadow on the rings
+const SATU={sunPos:{value:new THREE.Vector3()},satC:{value:new THREE.Vector3()},satR:{value:4.6},ringN:{value:new THREE.Vector3(0,1,0)},rIn:{value:4.6*1.25},rOut:{value:4.6*2.3},ringMap:{value:null}};
+{const sb=BODIES.find(b=>b.id==='saturn'),ss=planetState.find(s=>s.b.id==='saturn');SATU.satR.value=sb.r;SATU.rIn.value=sb.r*1.25;SATU.rOut.value=sb.r*2.3;
+ const vtx=sh=>{sh.vertexShader='varying vec3 vWPosX;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvWPosX=(modelMatrix*vec4(transformed,1.0)).xyz;')};
+ const pre='uniform vec3 sunPos;uniform vec3 satC;uniform float satR;uniform vec3 ringN;uniform float rIn;uniform float rOut;uniform sampler2D ringMap;varying vec3 vWPosX;\n';
+ ss.mesh.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,SATU);vtx(sh);sh.fragmentShader=pre+sh.fragmentShader.replace('#include <dithering_fragment>','{vec3 L=normalize(sunPos-vWPosX);float dn=dot(L,ringN);if(abs(dn)>1e-4){float t=dot(satC-vWPosX,ringN)/dn;if(t>0.0){vec3 P=vWPosX+L*t;float r=length(P-satC);if(r>rIn&&r<rOut){float a=texture2D(ringMap,vec2((r-rIn)/(rOut-rIn),0.5)).a;gl_FragColor.rgb*=1.0-0.82*a;}}}}\n#include <dithering_fragment>')};
+ if(sb._ring){SATU.ringMap.value=sb._ring.material.map;sb._ring.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,SATU);vtx(sh);sh.fragmentShader=pre+sh.fragmentShader.replace('#include <dithering_fragment>','{vec3 L=normalize(sunPos-vWPosX);vec3 oc=vWPosX-satC;float b=dot(oc,L);float c=dot(oc,oc)-satR*satR;float h=b*b-c;if(h>0.0&&-b-sqrt(h)>0.0)gl_FragColor.rgb*=0.1;}\n#include <dithering_fragment>')}}
+ window.__satShadow=()=>{ss.holder.getWorldPosition(SATU.satC.value);SATU.ringN.value.set(0,1,0).applyQuaternion(ss.mesh.getWorldQuaternion(new THREE.Quaternion()));if(sb._ring&&sb._ring.material.map)SATU.ringMap.value=sb._ring.material.map}}
+function updateEarthSun(){updateEclipses();if(window.__satShadow)window.__satShadow();const e=worldPos(earthO),sdir=e.clone().negate().normalize();camera.updateMatrixWorld();earthSunU.value.copy(sdir).transformDirection(camera.matrixWorldInverse);ECL.dir.value.copy(ECLW).transformDirection(camera.matrixWorldInverse)}
 
 // real all-sky Milky Way photo (galactic coordinates), wrapped on a sky sphere aligned with the galaxy
 let skyBox=null,galPts=null;galaxy.children.forEach(c=>{if(c.isPoints)galPts=c});
@@ -1020,10 +1073,11 @@ function liveRows(o){const ms=simMs;
  if(o.type==='sat'&&o.id!=='jwst'){const[la,lo]=localLL(worldPos(o).sub(worldPos(earthO)));return[['Currently over',fmtLL(la,lo)],['Below it',sunElev(la,lo)>0?'Daytime':'Night side']]}
  if(o.id==='subsolar'){const[la,lo]=localLL(worldPos(o).sub(worldPos(earthO)));return[['Sun is overhead at',fmtLL(la,lo)]]}
  if(o.type==='star'){const y=new Date(ms).getFullYear();return[['Light reaching Earth now left',o.ly<1000?`around ${Math.round(y-o.ly)}`:`${Math.round(o.ly)} years ago`]]}
- if(o.id==='moon'){const[p,ill]=moonPhase();return[['Phase',p],['Illuminated',ill.toFixed(0)+'%'],['Distance from Earth',Math.round(moonNow.km).toLocaleString()+' km']]}
+ if(o.id==='moon'){const[p,ill]=moonPhase();const le=lunInfo?[['Eclipse now',lunInfo.fu>=.999?'Total lunar eclipse: Earth’s shadow is turning the Moon red':lunInfo.fu>0?`Partial lunar eclipse: ${(lunInfo.fu*100).toFixed(0)}% in Earth’s dark shadow`:'Penumbral lunar eclipse: the Moon is slightly dimmed']]:[];return[...le,['Phase',p],['Illuminated',ill.toFixed(0)+'%'],['Distance from Earth',Math.round(moonNow.km).toLocaleString()+' km']]}
  if(o.id==='sun'){const r=len(HP.earth);return[['Distance from Earth',fmtAU(r)],['Sunlight takes',lt(r)]]}
  if(o.id==='earth'){const E=HP.earth,sl=((Math.atan2(-E[1],-E[0])/D2R)+360)%360,q=Math.floor(sl/90),[p,ill]=moonPhase(),[la,lo]=localLL(worldPos(objects.find(x=>x.id==='subsolar')).sub(worldPos(earthO)));
-  return[['Distance from Sun',fmtAU(len(E))],['Season (N / S)',[['Spring','Autumn'],['Summer','Winter'],['Autumn','Spring'],['Winter','Summer']][q].join(' / ')],['Sun overhead at',fmtLL(la,lo)],['Moon',`${p}, ${ill.toFixed(0)}% lit`]]}
+  let se=[];if(eclInfo&&eclInfo.on){const[sl,so]=localLL(eclInfo.dirW);se=[['Solar eclipse now',`${eclInfo.total?'Total':eclInfo.annular?'Annular':'Partial'} — the Moon’s shadow is over ${fmtLL(sl,so)}`]]}else if(eclInfo)se=[['Solar eclipse now','Partial, near the edge of the day side']];
+  return[...se,['Distance from Sun',fmtAU(len(E))],['Season (N / S)',[['Spring','Autumn'],['Summer','Winter'],['Autumn','Spring'],['Winter','Summer']][q].join(' / ')],['Sun overhead at',fmtLL(la,lo)],['Moon',`${p}, ${ill.toFixed(0)}% lit`]]}
  if(HP[o.id]){const r=len(HP[o.id]),d=len(sub3(HP[o.id],HP.earth)),lon=((Math.atan2(HP[o.id][1],HP[o.id][0])/D2R)+360)%360;
   return[['Distance from Sun',fmtAU(r)],['Distance from Earth',fmtAU(d)],['Light from it takes',lt(d)],['Heliocentric longitude',lon.toFixed(1)+'°']]}
  return null}
@@ -1136,28 +1190,35 @@ $('now').onclick=()=>{simMs=Date.now();rate=1;$('rate').value='1';paused=false;$
 $('pick').onchange=e=>{const t=new Date(e.target.value).getTime();if(!isNaN(t)){simMs=t;setLive(false)}};
 $('orb').onclick=e=>{const on=e.target.classList.toggle('on');[...orbitLines,...satLines].forEach(l=>l.visible=on)};
 $('lab').onclick=e=>{showLabels=e.target.classList.toggle('on');labels.style.display=showLabels?'':'none'};
-addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('sky').hidden)$('sky').hidden=true;else $('close').click()}});
+addEventListener('keydown',e=>{const tg=e.target.tagName;if(!['INPUT','SELECT','TEXTAREA'].includes(tg)&&!e.metaKey&&!e.ctrlKey&&!e.altKey){
+  if(e.key==='/'){e.preventDefault();$('q').focus();return}if(e.key===' '&&tg!=='BUTTON'){e.preventDefault();$('pause').click();return}
+  if(e.key==='n'||e.key==='N'){$('now').click();return}if(e.key==='+'||e.key==='='||e.key==='-'){const r=$('rate');r.selectedIndex=Math.max(0,Math.min(r.options.length-1,r.selectedIndex+(e.key==='-'?-1:1)));r.dispatchEvent(new Event('change'));return}}
+ if(e.key==='Escape'){if(!$('sky').hidden)$('sky').hidden=true;else $('close').click()}});
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 const clock=new THREE.Clock(),v3=new THREE.Vector3();
+// adaptive resolution: step the pixel ratio down if frames are slow
+let fpsEma=1/60,slowFor=0,prMax=Math.min(devicePixelRatio,2),prNow=prMax;
+function adaptQuality(dt){fpsEma=fpsEma*.95+dt*.05;if(fpsEma>1/28){slowFor+=dt;if(slowFor>2.5&&prNow>.75){prNow=Math.max(.75,prNow-.5);renderer.setPixelRatio(prNow);resize();slowFor=0}}else slowFor=Math.max(0,slowFor-dt*.5)}
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let lastUI=0;const prevQ=new THREE.Quaternion(),dq=new THREE.Quaternion();
-function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.25);
+function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.25);adaptQuality(dt);
  if(live)simMs=Date.now();else if(!paused)simMs+=dt*1000*rate*dirn;
  prevQ.copy(earthMesh.quaternion);updateWorld(simMs);
  if(Math.abs(simMs-orbitAt)>(rate>86400?20:2)*864e5||(performance.now()-lastUI>500&&Math.abs(simMs-orbitAt)>36e5))refreshOrbits(simMs);
  // follow & fly
  if(focus&&focus.obj&&!fly){worldPos(focus,v3);const delta=v3.clone().sub(controls.target);controls.target.add(delta);camera.position.add(delta);
   if(['loc','nat','quake','event','launch'].includes(focus.type)||(focus.type==='sat'&&focus.lon!==undefined)){dq.copy(earthMesh.quaternion).multiply(prevQ.clone().invert());const off=camera.position.clone().sub(controls.target).applyQuaternion(dq);camera.position.copy(controls.target).add(off)}}
- if(fly){fly.t=Math.min(1,fly.t+dt/1.6);const e=fly.t<.5?4*fly.t**3:1-(-2*fly.t+2)**3/2;
+ if(fly){fly.t=Math.min(1,fly.t+dt/(REDUCED?.25:1.6));const e=fly.t<.5?4*fly.t**3:1-(-2*fly.t+2)**3/2;
   const tgt=fly.obj?worldPos(fly.obj,v3).clone():fly.target;controls.target.lerpVectors(fly.from,tgt,e);
   if(fly.surface)fly.dir=tgt.clone().sub(worldPos(earthO)).normalize();
   const camTo=fly.camTo||tgt.clone().add(fly.dir.clone().multiplyScalar(fly.dist));camera.position.lerpVectors(fly.camFrom,camTo,e);
   if(fly.t>=1)fly=null}
  controls.minDistance=focus&&focus.type==='loc'?.003:focus&&['sat','nat','quake','event','launch'].includes(focus.type)?.2:1;
  {const dcam=camera.position.distanceTo(controls.target),nr=Math.max(1e-5,Math.min(.05,dcam*.05));if(Math.abs(nr-camera.near)/camera.near>.2){camera.near=nr;camera.updateProjectionMatrix()}}
- if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=.35+.35*Math.sin(performance.now()/300)}
+ if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=REDUCED?.6:.35+.35*Math.sin(performance.now()/300)}
  controls.update();updateEarthSun();updateSkyFade();
  if(window.__earthReal&&showLights){const ds=camera.position.distanceTo(worldPos(earthO))-ER;earthMesh.material.emissiveIntensity=1.7*Math.max(.15,Math.min(1,(ds-.02)/.3))}if(Math.abs(simMs-trackAt)>(live?20000:rate*0.5*1000+60000))updateTrack();renderer.render(scene,camera);
  if(performance.now()-lastUI>250){lastUI=performance.now();
