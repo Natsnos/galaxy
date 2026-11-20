@@ -70,7 +70,12 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
 #q:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 #gmap{width:100%;aspect-ratio:1;border:0;border-radius:14px;display:block;background:#0b0f1c}
 #results .ev{cursor:pointer}#results:empty{display:none}
-#photo{width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;display:block;background:#000}
+#phwrap{position:relative}#phbadge{position:absolute;left:10px;top:10px;background:#000b;color:#fff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid #fff4}
+#tip{position:fixed;z-index:35;pointer-events:none;background:#0d1222f2;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;max-width:280px;transform:translate(14px,14px)}
+#tip b{display:block}#tip span{color:var(--dim);font-size:13px}
+.mkl{display:flex;flex-wrap:wrap;gap:6px}.mkl button{display:inline-flex;gap:6px;align-items:center;font-size:13px;min-height:36px;padding:0 10px}.mkl button:not(.on){opacity:.5}
+.mkl img{display:block}
+#photo{width:100%;aspect-ratio:1;object-fit:contain;border-radius:14px;display:block;background:#000}
 #sky{position:fixed;inset:0;background:#02040a;z-index:20;display:flex;flex-direction:column;padding:12px max(2vw,12px)}#sky[hidden]{display:none}
 .skyhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.skyhead>div{flex:1;font-size:17px}
 #skyc{flex:1;width:100%;min-height:0;display:block}#skyx{width:44px;padding:0;font-size:22px}
@@ -135,6 +140,7 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
 </header>
 <div id="loader"><div class="lcard"><div class="lname">Interactive <span>Galaxy</span></div><div class="lsub" id="lsub">Loading planets…</div><div class="lbar"><i id="lbar"></i></div></div></div>
 <div id="tour" hidden role="dialog" aria-label="Quick tour"><div id="ttext"></div><div class="trow"><span id="tstep"></span><button id="tskip">Skip</button><button id="tback">Back</button><button id="tnext" class="on">Next</button></div></div>
+<div id="tip" hidden></div>
 <div id="toast" hidden><span id="toasttext"></span><button id="toastx" aria-label="Dismiss">×</button></div>
 <div id="hint">Live positions for right now · drag to orbit · scroll to zoom · click anything glowing</div>
 <aside id="info" aria-live="polite">
@@ -146,7 +152,8 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
     <div class="frow"><button data-mt="k" class="on">Satellite</button><button data-mt="m">Map</button><button data-mt="h">Hybrid</button></div>
   </div>
   <div id="results"></div>
-  <img id="photo" alt="" hidden>
+  <div id="phwrap"><img id="photo" alt="" hidden><span id="phbadge" hidden>Real photo</span></div>
+  <div class="frow" id="phtog" hidden><button data-ph="photo" class="on">Real photo</button><button data-ph="model">3D model</button></div>
   <canvas id="pic" width="480" height="480"></canvas>
   <div class="cap" id="piccap">Rendered portrait from this model. Tap below for real telescope and spacecraft photos.</div>
   <div class="sub" id="ilivecap">Right now (at the time shown)</div>
@@ -159,6 +166,7 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
     <div class="frow"><input id="ll" placeholder="Address, place, or lat, lon" aria-label="Address, place, or latitude and longitude"><button id="flyll">Go</button></div>
     <div class="frow"><button id="myloc">Use my location</button><button id="skyhere">Sky view from here</button></div>
     <div id="llerr" class="cap"></div>
+    <div id="mkx" hidden><div class="sub">Map markers on the globe</div><div id="mklegend" class="mkl"></div><div class="cap">Hover a marker to see what it is. Click or tap it for details.</div></div>
     <div id="zoomx" hidden><div class="sub">Zoom in on this place</div><div class="frow"><button data-z="region">Region</button><button data-z="city">City</button><button data-z="street">Street</button></div><div id="detailcap" class="cap"></div></div>
     <div id="wxx" hidden><div class="sub">Live weather on the globe</div><div class="frow"><button data-wx="clouds">Clouds</button><button data-wx="temp">Temperature</button><button data-wx="precip">Rain & snow</button><button data-wx="off">Off</button></div><div id="wxcap" class="cap"></div></div>
     <div id="imgx" hidden><div class="sub">Earth imagery</div><div class="frow"><button data-img="map">Standard</button><button data-img="bm">Blue Marble</button><button data-img="yday">Yesterday from space</button></div></div>
@@ -657,7 +665,7 @@ const HOSTR={mars:3390,saturn:58232,uranus:25362,neptune:24622,pluto:1188};
 for(const m of MOONS){const host=objects.find(o=>o.id===m.host);const mesh=new THREE.Mesh(new THREE.SphereGeometry(m.r,32,16),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(makeTex(m.tex,256,128).cv),roughness:1}));
  host.obj.add(mesh);m.mesh=mesh;const N=radec(ROT[m.host][0],ROT[m.host][1]),e1=new THREE.Vector3(1,0,0).cross(N).normalize(),e2=N.clone().cross(e1);m.N=N;
  const pts=[];for(let i=0;i<=128;i++){const t=i/128*Math.PI*2;pts.push(e1.clone().multiplyScalar(Math.cos(t)*m.d).add(e2.clone().multiplyScalar(Math.sin(t)*m.d)))}
- const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x5a6680,transparent:true,opacity:.3}));host.obj.add(ln);orbitLines.push(ln);
+ const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x5a6680,transparent:true,opacity:.14}));host.obj.add(ln);orbitLines.push(ln);
  reg({...m,kind:`Moon of ${m.host[0].toUpperCase()+m.host.slice(1)}`},mesh,'body',2.4,mesh)}
 const sD=x=>Math.sin(x*D2R),cD=x=>Math.cos(x*D2R);
 function updateMoons(ms){const d=dJ(ms),V=172.74+0.00111588*d,M=357.529+0.9856003*d,N=20.020+0.0830853*d+0.329*sD(V),J=66.115+0.9025179*d-0.329*sD(V);
@@ -770,12 +778,36 @@ async function getData(u,text){try{const c=new AbortController(),tm=setTimeout((
 const loadScript=src=>new Promise(res=>{const s=document.createElement('script');s.src=src;s.onload=()=>res(true);s.onerror=()=>res(false);document.head.appendChild(s)});
 // real photos from Wikipedia / Wikimedia Commons
 const photoCache={};const PLACE_WIKI={'New York':'New_York_City','Amazon (Manaus)':'Manaus','Sahara Desert':'Sahara','Pyramids of Giza':'Giza_pyramid_complex','Rome':'Rome','Paris':'Paris'};
-async function loadPhoto(o){if(o.photo){const img=$('photo');img.hidden=true;$('pic').hidden=false;img.onload=()=>{if(focus!==o)return;img.hidden=false;$('pic').hidden=true;$('piccap').textContent='Photo via Launch Library 2 (The Space Devs)'};img.onerror=()=>{};img.src=o.photo;return}
+// famous real photos; if one can't load, the page falls back to Wikipedia's lead image, then to the 3D model
+const PHOTOS={sun:['https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0304.jpg','The Sun right now · NASA Solar Dynamics Observatory (ultraviolet, updated every few minutes)'],
+ mercury:['Mercury_in_true_color.jpg','Mercury · NASA MESSENGER'],venus:['Venus-real_color.jpg','Venus in true colour · NASA Mariner 10'],earth:['The_Earth_seen_from_Apollo_17.jpg','“The Blue Marble” · Apollo 17 crew, 1972'],
+ moon:['FullMoon2010.jpg','The full Moon · Gregory H. Revera'],mars:['OSIRIS_Mars_true_color.jpg','Mars · ESA Rosetta OSIRIS'],jupiter:['Jupiter_and_its_shrunken_Great_Red_Spot.jpg','Jupiter · NASA/ESA Hubble'],
+ saturn:['Saturn_during_Equinox.jpg','Saturn · NASA Cassini'],uranus:['Uranus2.jpg','Uranus · NASA Voyager 2'],neptune:['Neptune_-_Voyager_2_(29347980845)_flatten_crop.jpg','Neptune · NASA Voyager 2'],
+ pluto:['Pluto_in_True_Color_-_High-Res.jpg','Pluto · NASA New Horizons'],charon:['Charon_in_True_Color_-_High-Res.jpg','Charon · NASA New Horizons'],
+ io:['Io_highest_resolution_true_color.jpg','Io · NASA Galileo'],europa:['Europa-moon-with-margins.jpg','Europa · NASA Galileo'],ganymede:['Ganymede_g1_true-edit1.jpg','Ganymede · NASA Galileo'],callisto:['Callisto.jpg','Callisto · NASA Galileo'],
+ titan:['Titan_in_true_color.jpg','Titan · NASA Cassini'],enceladus:['PIA17202_-_Approaching_Enceladus.jpg','Enceladus · NASA Cassini'],mimas:['Mimas_Cassini.jpg','Mimas · NASA Cassini'],
+ iapetus:['Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg','Iapetus · NASA Cassini'],triton:['Triton_moon_mosaic_Voyager_2_(large).jpg','Triton · NASA Voyager 2'],phobos:['Phobos_colour_2008.jpg','Phobos · NASA Mars Reconnaissance Orbiter'],
+ miranda:['Miranda.jpg','Miranda · NASA Voyager 2'],
+ betelgeuse:['Orion_Head_to_Toe.jpg','Orion, with red Betelgeuse at top left and blue Rigel at bottom right · Rogelio Bernal Andreo'],rigel:['Orion_Head_to_Toe.jpg','Orion, with blue Rigel at bottom right · Rogelio Bernal Andreo'],
+ sirius:['Sirius_A_and_B_Hubble_photo.jpg','Sirius A with its tiny companion Sirius B (lower left) · NASA/ESA Hubble'],proxima:['New_shot_of_Proxima_Centauri,_our_nearest_neighbour.jpg','Proxima Centauri · ESA/Hubble & NASA'],
+ acen:['Alpha,_Beta_and_Proxima_Centauri_(1).jpg','Alpha Centauri (left), with Proxima circled · Skatebiker'],
+ andromeda:['Andromeda_Galaxy_(with_h-alpha).jpg','The Andromeda Galaxy · Adam Evans'],milky:['ESO_-_Milky_Way.jpg','The Milky Way over the Atacama Desert · ESO'],
+ halley:['Lspn_comet_halley.jpg','Halley’s Comet in 1986 · NASA'],halebopp:['Comet-Hale-Bopp-29-03-1997_hires_adj.jpg','Comet Hale–Bopp in 1997 · Philipp Salzgeber'],
+ iss:['International_Space_Station_after_undocking_of_STS-132.jpg','The ISS · NASA'],hubble:['HST-SM4.jpeg','Hubble after its last servicing mission · NASA'],belt:['Vesta_full_mosaic.jpg','Asteroid Vesta · NASA Dawn']};
+const commons=f=>f.startsWith('http')?f:`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=800`;
+let phMode='photo';
+document.querySelectorAll('[data-ph]').forEach(b=>b.onclick=()=>{phMode=b.dataset.ph;document.querySelectorAll('[data-ph]').forEach(x=>x.classList.toggle('on',x===b));if(focus)loadPhoto(focus)});
+function showPhoto(o,src,cap,onfail){const img=$('photo');img.onload=()=>{if(focus!==o)return;img.hidden=false;$('phbadge').hidden=false;$('pic').hidden=true;$('phtog').hidden=false;$('piccap').textContent='Real photo: '+cap};img.onerror=onfail;img.alt=cap;img.src=src}
+async function loadPhoto(o){$('phbadge').hidden=true;$('phtog').hidden=true;
+ if(phMode==='model'&&o.type!=='loc'){$('photo').hidden=true;$('pic').hidden=false;$('phtog').hidden=false;$('piccap').textContent='3D model view, drawn from the same maps used on the globe.';return}
+ const P=PHOTOS[o.id];if(P&&o.type!=='loc'){$('photo').hidden=true;$('pic').hidden=false;$('piccap').textContent='Loading a real photo…';showPhoto(o,commons(P[0]),P[1],()=>{if(focus===o)loadPhotoWiki(o)});return}
+ return loadPhotoWiki(o)}
+async function loadPhotoWiki(o){if(o.photo){const img=$('photo');img.hidden=true;$('pic').hidden=false;img.onload=()=>{if(focus!==o)return;img.hidden=false;$('pic').hidden=true;$('phbadge').hidden=false;$('piccap').textContent='Real photo: Launch Library 2 (The Space Devs)'};img.onerror=()=>{};img.src=o.photo;return}
  const img=$('photo'),title=o.type==='loc'?(PLACE_WIKI[o.name]||(o.name!=='Pinned spot'&&o.name!=='Your location'?o.name.replace(/ /g,'_'):null)):o.wiki;
- img.hidden=true;$('pic').hidden=false;$('piccap').textContent='Rendered portrait from this model. Tap below for real telescope and spacecraft photos.';if(!title)return;
+ img.hidden=true;$('pic').hidden=false;$('piccap').textContent='3D model view. Tap below for real telescope and spacecraft photos.';if(!title)return;
  let j=photoCache[title];if(j===undefined){j=photoCache[title]=await getData('https://en.wikipedia.org/api/rest_v1/page/summary/'+title);FEED.photos=!!j;feedMsg()}
  const src=j&&(j.thumbnail?.source?.replace(/\/\d+px-/,'/800px-')||j.originalimage?.source);if(!src||focus!==o)return;
- img.onload=()=>{if(focus!==o)return;img.hidden=false;$('pic').hidden=true;$('piccap').textContent=`Real photo · ${j.title} · via Wikipedia / Wikimedia Commons`};
+ img.onload=()=>{if(focus!==o)return;img.hidden=false;$('pic').hidden=true;$('phbadge').hidden=false;$('phtog').hidden=o.type==='loc';$('piccap').textContent=`Real photo: ${j.title}, from Wikipedia / Wikimedia Commons`};
  img.onerror=()=>{if(j.originalimage&&img.src!==j.originalimage.source)img.src=j.originalimage.source};img.src=src}
 // Earth imagery from NASA GIBS
 const gibs=(layer,date)=>`https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=${layer}&CRS=EPSG:4326&BBOX=-90,-180,90,180&WIDTH=2048&HEIGHT=1024&FORMAT=image/jpeg${date?'&TIME='+date:''}`;
@@ -801,14 +833,34 @@ async function liveSats(){const ok=await loadScript('https://cdn.jsdelivr.net/np
  FEED['satellite tracking']=!!(st||hb);feedMsg();orbitAt=-1e15}
 // earthquakes (USGS) and natural events (NASA EONET)
 const EVCOL={Wildfires:'#ff7a2e',Volcanoes:'#ff3b3b','Severe Storms':'#5ad1ff','Sea and Lake Ice':'#e8f4ff',Floods:'#3f8cff',Earthquakes:'#ffd23f',Drought:'#d9a441',Landslides:'#b07a4a','Dust and Haze':'#d9c79a',Snow:'#ffffff','Temperature Extremes':'#ff4fa3',Manmade:'#c0c0c0','Water Color':'#40e0d0'};
-function addMarker(lat,lon,col,size,data,type){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(col,.3),blending:THREE.AdditiveBlending,transparent:true,depthWrite:false}));sp.scale.set(size,size,1);sp.position.copy(llLocal(lat,lon,ER*1.006));earthMesh.add(sp);return reg({...data,lat,lon},sp,type,1.4)}
+// each kind of marker gets its own symbol, so they can be told apart at a glance
+const glyphCache={};
+function glyphTex(kind,col){const key=kind+col;if(glyphCache[key])return glyphCache[key];const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.translate(32,32);
+ g.lineWidth=5;g.strokeStyle='#000a';g.fillStyle=col;g.lineJoin='round';
+ const sh=()=>{g.stroke();g.fill()};
+ if(kind==='quake'){g.fillStyle='#0000';g.strokeStyle='#000a';g.lineWidth=9;[10,20].forEach(r=>{g.beginPath();g.arc(0,0,r,0,7);g.stroke()});g.strokeStyle=col;g.lineWidth=4;[10,20].forEach(r=>{g.beginPath();g.arc(0,0,r,0,7);g.stroke()});g.fillStyle=col;g.beginPath();g.arc(0,0,4,0,7);g.fill()}
+ else if(kind==='fire'){g.beginPath();g.moveTo(0,-24);g.bezierCurveTo(16,-6,18,8,12,16);g.quadraticCurveTo(0,26,-12,16);g.bezierCurveTo(-18,6,-8,-4,0,-24);sh();g.fillStyle='#ffe28a';g.beginPath();g.moveTo(0,-4);g.quadraticCurveTo(8,8,4,16);g.quadraticCurveTo(0,20,-4,16);g.quadraticCurveTo(-8,8,0,-4);g.fill()}
+ else if(kind==='storm'){g.lineWidth=9;g.strokeStyle='#000a';const sp=()=>{g.beginPath();for(let a=0;a<4.4*Math.PI;a+=.2){const r=2+a*1.55;g.lineTo(Math.cos(a)*r,Math.sin(a)*r)}g.stroke()};sp();g.lineWidth=4.5;g.strokeStyle=col;sp()}
+ else if(kind==='volcano'){g.beginPath();g.moveTo(-22,18);g.lineTo(-6,-12);g.lineTo(6,-12);g.lineTo(22,18);g.closePath();sh();g.fillStyle='#ff3b1f';g.beginPath();g.arc(0,-18,6,0,7);g.fill()}
+ else if(kind==='launch'){g.beginPath();g.moveTo(0,-26);g.quadraticCurveTo(10,-12,9,10);g.lineTo(16,20);g.lineTo(-16,20);g.lineTo(-9,10);g.quadraticCurveTo(-10,-12,0,-26);sh();g.fillStyle='#4a2a00';g.beginPath();g.arc(0,-6,4,0,7);g.fill()}
+ else{g.beginPath();g.moveTo(0,-20);g.lineTo(18,0);g.lineTo(0,20);g.lineTo(-18,0);g.closePath();sh()}
+ return glyphCache[key]=new THREE.CanvasTexture(c)}
+const LAYERS={quakes:{name:'Earthquakes',col:'#ffd23f',glyph:'quake',on:true},fires:{name:'Wildfires',col:'#ff7a2e',glyph:'fire',on:true},storms:{name:'Storms',col:'#5ad1ff',glyph:'storm',on:true},
+ volcanoes:{name:'Volcanoes',col:'#ff3b3b',glyph:'volcano',on:true},launches:{name:'Rocket launches',col:'#ffb347',glyph:'launch',on:true},other:{name:'Other events',col:'#e8f4ff',glyph:'other',on:true}};
+const layerOf=cat=>({Wildfires:'fires','Severe Storms':'storms',Volcanoes:'volcanoes'}[cat]||'other');
+const MARKERS=[];
+function addMarker(lat,lon,col,size,data,type,layer){const L=LAYERS[layer||'other'];const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glyphTex(L.glyph,layer==='other'?col:L.col),transparent:true,depthWrite:false}));
+ const k=Math.min(.16,Math.max(.07,size*.8));sp.scale.set(k,k,1);sp.userData.base=k;MARKERS.push(sp);sp.position.copy(llLocal(lat,lon,ER*1.008));sp.visible=L.on;earthMesh.add(sp);const o=reg({...data,lat,lon,layer:layer||'other'},sp,type,1.4);renderLegend();return o}
+function renderLegend(){const el=$('mklegend');if(!el)return;const cnt={};objects.forEach(o=>{if(o.layer)cnt[o.layer]=(cnt[o.layer]||0)+1});const ks=Object.keys(LAYERS).filter(k=>cnt[k]);
+ $('mkx').dataset.has=ks.length?'1':'';el.innerHTML=ks.map(k=>`<button data-layer="${k}" class="${LAYERS[k].on?'on':''}" aria-pressed="${LAYERS[k].on}"><img src="${glyphTex(LAYERS[k].glyph,LAYERS[k].col).image.toDataURL()}" alt="" width="20" height="20">${LAYERS[k].name} (${cnt[k]})</button>`).join('')}
+$('mklegend').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b)return;const L=LAYERS[b.dataset.layer];L.on=!L.on;objects.forEach(o=>{if(o.layer===b.dataset.layer)o.obj.visible=L.on});renderLegend()});
 async function liveEarth(){const q=await getData('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson');
- if(q){for(const f of q.features){const[lo,la,dep]=f.geometry.coordinates,p=f.properties;addMarker(la,lo,'#ffd23f',.05+p.mag*.025,{id:'q'+f.id,name:`M${p.mag.toFixed(1)} earthquake`,kind:p.place||'Earthquake',
-   facts:[['Magnitude',p.mag.toFixed(1)],['Depth',dep.toFixed(0)+' km'],['When',new Date(p.time).toLocaleString()],['Location',fmtLL(la,lo)],['Tsunami flag',p.tsunami?'Yes':'No']],desc:'From the USGS live feed of magnitude 4.5+ earthquakes over the past week.',links:[['USGS event page ↗',p.url,1],['Live earthquake map — USGS ↗','https://earthquake.usgs.gov/earthquakes/map/']]},'quake')}FEED['earthquakes (USGS)']=true}else FEED['earthquakes (USGS)']=false;
+ if(q){for(const f of q.features){const[lo,la,dep]=f.geometry.coordinates,p=f.properties;addMarker(la,lo,'#ffd23f',.05+p.mag*.02,{id:'q'+f.id,name:`M${p.mag.toFixed(1)} earthquake`,kind:p.place||'Earthquake',
+   facts:[['Magnitude',p.mag.toFixed(1)],['Depth',dep.toFixed(0)+' km'],['When',new Date(p.time).toLocaleString()],['Location',fmtLL(la,lo)],['Tsunami flag',p.tsunami?'Yes':'No']],desc:'From the USGS live feed of magnitude 4.5+ earthquakes over the past week.',links:[['USGS event page ↗',p.url,1],['Live earthquake map — USGS ↗','https://earthquake.usgs.gov/earthquakes/map/']]},'quake','quakes')}FEED['earthquakes (USGS)']=true}else FEED['earthquakes (USGS)']=false;
  const ev=await getData('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30&limit=200');
  if(ev){for(const e of ev.events){const gm=e.geometry[e.geometry.length-1];if(!gm)continue;let c=gm.coordinates;while(Array.isArray(c[0]))c=c[0];const cat=e.categories[0]?.title||'Event';
    addMarker(c[1],c[0],EVCOL[cat]||'#ffffff',.14,{id:'e'+e.id,name:e.title,kind:cat+' · NASA EONET',facts:[['Type',cat],['Latest update',new Date(gm.date).toLocaleString()],['Location',fmtLL(c[1],c[0])]].concat(gm.magnitudeValue?[['Magnitude',`${gm.magnitudeValue} ${gm.magnitudeUnit||''}`]]:[]),
-    desc:'An open natural event tracked by NASA’s Earth Observatory Natural Event Tracker (EONET).',links:[e.sources?.[0]?.url&&['Source report ↗',e.sources[0].url,1],['See it from space — NASA Worldview ↗',`https://worldview.earthdata.nasa.gov/?v=${c[0]-8},${c[1]-5},${c[0]+8},${c[1]+5}`]].filter(Boolean)},'event')}FEED['natural events (NASA)']=true}else FEED['natural events (NASA)']=false;
+    desc:'An open natural event tracked by NASA’s Earth Observatory Natural Event Tracker (EONET).',links:[e.sources?.[0]?.url&&['Source report ↗',e.sources[0].url,1],['See it from space — NASA Worldview ↗',`https://worldview.earthdata.nasa.gov/?v=${c[0]-8},${c[1]-5},${c[0]+8},${c[1]+5}`]].filter(Boolean)},'event',layerOf(cat))}FEED['natural events (NASA)']=true}else FEED['natural events (NASA)']=false;
  feedMsg()}
 // weather at a location (Open-Meteo)
 const WMO={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Freezing fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Heavy freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Rain showers',81:'Rain showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Severe thunderstorm with hail'};
@@ -868,7 +920,7 @@ function paintWx(){const cl=BODIES.find(b=>b.id==='earth')._cl;if(!cl)return;if(
  const W=720,H=360,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d'),im=g.createImageData(W,H),d=im.data;
  for(let j=0;j<H;j++){const lat=90-(j+.5)/H*180,lr=lat*D2R,cl_=Math.cos(lr),sy=Math.sin(lr);for(let i=0;i<W;i++){const lon=(i+.5)/W*360-180,lo=(lon+180)*D2R,x=cl_*Math.cos(lo)+2,y=sy+2,z=cl_*Math.sin(lo)+2,k=(j*W+i)*4;let r,gg,b,a;
   if(wxMode==='clouds'){const cc=wxAtLL(lat,lon,'cloud_cover')/100,pr=wxAtLL(lat,lon,'precipitation'),n=fbm(x*5,y*5,z*5,4,60),q=sm(.2,.85,cc+(n-.5)*.7);r=gg=b=255;a=q*225+Math.min(1,pr/3)*25;if(pr>.5){r=gg=232;b=240}}
-  else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=150}
+  else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=105}
   else{const pr=wxAtLL(lat,lon,'precipitation'),t=wxAtLL(lat,lon,'temperature_2m'),q=sm(.05,4,pr);[r,gg,b]=t<0?[235,245,255]:[60,140,255];a=q*210}
   d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=a}}
  g.putImageData(im,0,0);cl.material.map=new THREE.CanvasTexture(cv);cl.material.alphaMap=null;cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;
@@ -927,7 +979,7 @@ function updateEclipses(){if(!HP.earth||!moonNow)return;const AUkm=149597870.7,R
  lunInfo=fp>0?{fu,fp}:null;const mm=moonState&&moonState.mesh.material;if(mm&&mm.color){mm.color.setRGB(1-.42*fu,1-.78*fu,1-.88*fu);mm.color.multiplyScalar(1-.35*fp*(1-fu))}}
 const moonState=planetState.find(s=>s.b.id==='moon');
 window.__galaxyDebug={eclipse:()=>eclInfo&&{ll:localLL(eclInfo.dirW),k:eclInfo.k,total:eclInfo.total,annular:eclInfo.annular,on:eclInfo.on},lunar:()=>lunInfo,
- sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};
+ scr:id=>{const o=objects.find(x=>x.id===id);return o&&o._s},sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};
 // Saturn: ring shadow on the planet, planet shadow on the rings
 const SATU={sunPos:{value:new THREE.Vector3()},satC:{value:new THREE.Vector3()},satR:{value:4.6},ringN:{value:new THREE.Vector3(0,1,0)},rIn:{value:4.6*1.25},rOut:{value:4.6*2.3},ringMap:{value:null}};
 {const sb=BODIES.find(b=>b.id==='saturn'),ss=planetState.find(s=>s.b.id==='saturn');SATU.satR.value=sb.r;SATU.rIn.value=sb.r*1.25;SATU.rOut.value=sb.r*2.3;
@@ -970,7 +1022,7 @@ async function loadLaunches(){let j=null;try{const c=JSON.parse(localStorage.get
   return addMarker(lat+(n-1)*.15,lon,'#ffb347',.12,{id:'launch-'+i,name:l.name,kind:`Rocket launch · ${l.status?.name||'Scheduled'}`,net,photo:img,
    facts:[['Launch time',new Date(net).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})],['Rocket',rocket],['Launch provider',prov||'—'],['Pad',`${l.pad.name}${l.pad.location?.name?', '+l.pad.location.name:''}`],['Mission',mis],['Orbit',l.mission?.orbit?.name||'—']],
    desc:l.mission?.description||'An upcoming launch from the Launch Library 2 database. Launch times often shift, so check the countdown close to the day.',
-   links:[['Search for a live stream ↗',`https://www.youtube.com/results?search_query=${encodeURIComponent(l.name+' launch live')}`,1],['Launch details ↗',`https://www.google.com/search?q=${encodeURIComponent(l.name+' launch')}`]]},'launch')})}
+   links:[['Search for a live stream ↗',`https://www.youtube.com/results?search_query=${encodeURIComponent(l.name+' launch live')}`,1],['Launch details ↗',`https://www.google.com/search?q=${encodeURIComponent(l.name+' launch')}`]]},'launch','launches')})}
 const tminus=t=>{let d=Math.round((t-Date.now())/1000),sign=d<0?'T+ ':'T− ';d=Math.abs(d);const D=Math.floor(d/86400),H=Math.floor(d%86400/3600),M=Math.floor(d%3600/60),S=d%60;return sign+(D?D+' d ':'')+String(H).padStart(2,'0')+':'+String(M).padStart(2,'0')+':'+String(S).padStart(2,'0')};
 // ISS ground track over Earth + overhead-pass alerts for your home
 const issTrack=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x5fe0b0,transparent:true,opacity:.75}));issTrack.frustumCulled=false;earthMesh.add(issTrack);let trackAt=-1e15;
@@ -1108,9 +1160,16 @@ document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>setView(b.dataset
 
 /* ---------- picking ---------- */
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null;
-canvas.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+canvas.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];$('tip').hidden=true});
+const SMALL=['quake','event','launch','sat','nat','loc'];
+function nearestSmall(x,y,max){let best=null,bd=max;for(const o of objects){if(!o._s||!SMALL.includes(o.type)||o.obj.visible===false)continue;const d=Math.hypot(o._s[0]-x,o._s[1]-y);if(d<bd){bd=d;best=o}}return best}
+canvas.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||e.buttons){$('tip').hidden=true;return}const o=nearestSmall(e.clientX,e.clientY,16)||(()=>{let b=null,bd=14;for(const x of objects){if(!x._s||x.obj.visible===false)continue;const d=Math.hypot(x._s[0]-e.clientX,x._s[1]-e.clientY);if(d<bd){bd=d;b=x}}return b})();
+ const t=$('tip');if(!o){t.hidden=true;canvas.style.cursor='';return}canvas.style.cursor='pointer';
+ t.innerHTML=`<b>${String(o.name).replace(/</g,'&lt;')}</b><span>${String(o.kind||'').replace(/</g,'&lt;')} · click for details</span>`;t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';t.hidden=false});
+canvas.addEventListener('pointerleave',()=>$('tip').hidden=true);
 canvas.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6)return;
  const r=canvas.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+ const small=nearestSmall(e.clientX,e.clientY,22);if(small){select(small);return}
  const hits=ray.intersectObjects(objects.filter(o=>o.mesh).map(o=>o.mesh),false);
  if(hits.length){select(objects.find(o=>o.mesh===hits[0].object));return}
  let best=null,bd=30;for(const o of objects){if(!o._s)continue;const d=Math.hypot(o._s[0]-e.clientX,o._s[1]-e.clientY);if(d<bd){bd=d;best=o}}
@@ -1171,7 +1230,7 @@ function showInfo(o){$('iname').textContent=o.name;$('ikind').textContent=o.kind
   if(o.id==='earth')L.push(['Live weather & storms — Windy ↗','https://www.windy.com/',1],['Live satellite clouds, fires & hurricanes — Zoom Earth ↗','https://zoom.earth/'],['Live earthquakes — USGS ↗','https://earthquake.usgs.gov/earthquakes/map/'],['Live natural events — NASA Worldview ↗','https://worldview.earthdata.nasa.gov/'],['Live aurora forecast — NOAA ↗','https://www.swpc.noaa.gov/products/aurora-30-minute-forecast'],['Where is the ISS now? — NASA ↗','https://spotthestation.nasa.gov/']);
   if(o.wiki)L.push(['Read more on Wikipedia ↗',WIKI(o.wiki)])}
  $('ilinks').innerHTML=L.map(([t,u,pri])=>`<a class="real${pri?'':' alt'}" href="${u}" target="_blank" rel="noopener">${t}</a>`).join('');
- $('earthx').hidden=!(o.id==='earth'||o.type==='loc');$('zoomx').hidden=o.type!=='loc';$('wxx').hidden=!(o.id==='earth'||o.type==='loc')||!wxGrid;$('imgx').hidden=!(FEED['NASA Earth imagery']!==false&&Object.values(FEED).some(Boolean));
+ $('earthx').hidden=!(o.id==='earth'||o.type==='loc');$('mkx').hidden=!($('mkx').dataset.has&&o.id==='earth');$('zoomx').hidden=o.type!=='loc';$('wxx').hidden=!(o.id==='earth'||o.type==='loc')||!wxGrid;$('imgx').hidden=!(FEED['NASA Earth imagery']!==false&&Object.values(FEED).some(Boolean));
  $('extra').innerHTML=o.type==='events'?eventsHTML():o.type==='loc'?issPasses(o):o.id==='sun'?sunTodayHTML():o.id&&o.id.startsWith('aurora')?aurImgHTML(o):'';
  $('sethome').hidden=o.type!=='loc';$('sethome').textContent=home&&focus&&home.lat===o.lat&&home.lon===o.lon?'Saved as home':'Make this my home';$('sharerow').hidden=o.type==='quake'||o.type==='event'||o.type==='launch';if(o.type==='loc')loadWeather(o);
  $('ilivecap').textContent=o.type==='events'?'':'Right now (at the time shown)';renderLive();
@@ -1218,6 +1277,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
   if(fly.t>=1)fly=null}
  controls.minDistance=focus&&focus.type==='loc'?.003:focus&&['sat','nat','quake','event','launch'].includes(focus.type)?.2:1;
  {const dcam=camera.position.distanceTo(controls.target),nr=Math.max(1e-5,Math.min(.05,dcam*.05));if(Math.abs(nr-camera.near)/camera.near>.2){camera.near=nr;camera.updateProjectionMatrix()}}
+ if(MARKERS.length){const de=camera.position.distanceTo(worldPos(earthO));if(Math.abs(de-(window.__mkD||0))>.002){window.__mkD=de;for(const m of MARKERS){const k=Math.min(m.userData.base,Math.max(.003,(de-ER)*.03));m.scale.set(k,k,1)}}}
  if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=REDUCED?.6:.35+.35*Math.sin(performance.now()/300)}
  controls.update();updateEarthSun();updateSkyFade();
  if(window.__earthReal&&showLights){const ds=camera.position.distanceTo(worldPos(earthO))-ER;earthMesh.material.emissiveIntensity=1.7*Math.max(.15,Math.min(1,(ds-.02)/.3))}if(Math.abs(simMs-trackAt)>(live?20000:rate*0.5*1000+60000))updateTrack();renderer.render(scene,camera);
