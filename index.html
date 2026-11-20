@@ -616,13 +616,20 @@ const locO=reg({id:'loc',name:'Location',kind:'Place on Earth',facts:[],desc:''}
 const pinRing=new THREE.Sprite(new THREE.SpriteMaterial({map:(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.strokeStyle='#ff5a5a';g.lineWidth=8;g.beginPath();g.arc(64,64,52,0,7);g.stroke();return new THREE.CanvasTexture(c)})(),transparent:true,depthWrite:false}));pin.add(pinRing);
 // real satellite imagery draped on the globe around a place (Esri World Imagery), at three detail levels
 const DETAIL=[['region',8,.35],['city',1.2,.06],['street',.16,.009]];let detailMeshes=[];
+// soft edges so a patch blends into the globe instead of showing a hard box
+let _feather=null;function featherTex(){if(_feather)return _feather;const N=128,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d'),im=g.createImageData(N,N);
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const e=Math.min(x,N-1-x,y,N-1-y)/(N*.14),v=Math.round(255*Math.max(0,Math.min(1,e))*Math.max(0,Math.min(1,e))*(3-2*Math.max(0,Math.min(1,e)))),k=(y*N+x)*4;im.data[k]=im.data[k+1]=im.data[k+2]=v;im.data[k+3]=255}
+ g.putImageData(im,0,0);return _feather=new THREE.CanvasTexture(c)}
+// each patch shows only when you're zoomed in close enough to need it
+function fadeDetail(){if(!detailMeshes.length)return;const ds=camera.position.distanceTo(worldPos(earthO))-ER;
+ for(const m of detailMeshes){const w=m.userData.w,o=Math.max(0,Math.min(1,(w*3-ds)/(w*1.5)));m.material.opacity=o;m.visible=o>.01}}
 const esri=(w,s_,e,n)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${w},${s_},${e},${n}&bboxSR=4326&imageSR=4326&size=1024,1024&format=jpg&f=image`;
 function loadDetail(lat,lon){detailMeshes.forEach(m=>{earthMesh.remove(m);m.geometry.dispose&&m.geometry.dispose()});detailMeshes=[];if(Math.abs(lat)>84){$('detailcap').textContent='';return}
  let done=0;DETAIL.forEach(([nm,dLat],i)=>{const dLon=Math.min(60,dLat/Math.max(.15,Math.cos(lat*D2R))),N=Math.min(85,lat+dLat/2),S=Math.max(-85,lat-dLat/2),W=lon-dLon/2,E=lon+dLon/2;
   const img=new Image();img.crossOrigin='anonymous';
   img.onload=()=>{if(locO.lat!==lat||locO.lon!==lon)return;const t=new THREE.Texture(img);t.needsUpdate=true;
    const g=new THREE.SphereGeometry(ER*(1.0004+i*.00025),48,48,(W+180)*D2R,dLon*D2R,(90-N)*D2R,(N-S)*D2R);
-   const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:0xffffff,emissiveIntensity:.12,roughness:1,transparent:true,depthWrite:i===0}));m.renderOrder=2+i;earthMesh.add(m);detailMeshes.push(m);
+   const m=new THREE.Mesh(g,new THREE.MeshPhongMaterial({map:t,alphaMap:featherTex(),transparent:true,depthWrite:false,shininess:0,specular:0x000000,emissive:0xffffff,emissiveMap:t,emissiveIntensity:.05,opacity:0}));m.renderOrder=2+i;m.userData.w=dLat*D2R*ER;earthMesh.add(m);detailMeshes.push(m);
    done++;FEED['satellite imagery (Esri)']=true;feedMsg();$('detailcap').textContent='Real satellite imagery: Esri World Imagery (Esri, Maxar, Earthstar Geographics). Scroll or pinch to zoom closer.'};
   img.onerror=()=>{FEED['satellite imagery (Esri)']=false;feedMsg()};img.src=esri(W,S,E,N)})}
 function zoomTo(level){const d=DETAIL.find(x=>x[0]===level);if(!d||!pin.visible)return;focus=locO;fly={t:0,from:controls.target.clone(),camFrom:camera.position.clone(),dist:d[2],dir:new THREE.Vector3(),obj:locO,surface:true};
@@ -900,7 +907,7 @@ const gmapSrc=(o)=>GOOGLE_MAPS_KEY?`https://www.google.com/maps/embed/v1/${mapTy
 function showMap(o){const box=$('mapbox');if(o.type!=='loc'||!liveOK()){box.hidden=true;return}box.hidden=false;$('gmap').src=gmapSrc(o);$('pic').hidden=true;$('photo').hidden=true;$('piccap').textContent='Google Maps · drag and zoom inside the map'}
 document.querySelectorAll('[data-mt]').forEach(b=>b.onclick=()=>{mapType=b.dataset.mt;document.querySelectorAll('[data-mt]').forEach(x=>x.classList.toggle('on',x===b));if(focus&&focus.type==='loc')$('gmap').src=gmapSrc(focus)});
 const tzGuess=lon=>{const h=Math.round(lon/15);return h===0?'UTC':`Etc/GMT${h>0?'-':'+'}${Math.abs(h)}`};
-const shortName=r=>{const a=r.address||{},road=a.road?`${a.house_number?a.house_number+' ':''}${a.road}`:null,town=a.city||a.town||a.village||a.hamlet||a.county;return [road||r.name||(r.display_name||'').split(',')[0],town].filter(Boolean).join(', ')||r.display_name};
+const shortName=r=>{const a=r.address||{},road=a.road?`${a.house_number?a.house_number+' ':''}${a.road}`:null,town=a.city||a.town||a.village||a.hamlet||a.county;return [...new Set([road||r.name||(r.display_name||'').split(',')[0],town].filter(Boolean))].join(', ')||r.display_name};
 function goResult(r){$('results').innerHTML='';flyToPlace(shortName(r),+r.lat,+r.lon,tzGuess(+r.lon),{full:r.display_name})}
 async function runSearch(text,errEl){text=text.trim();if(!text)return;errEl.textContent='';
  const m=text.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
@@ -1026,7 +1033,7 @@ function updateEclipses(){if(!HP.earth||!moonNow)return;const AUkm=149597870.7,R
  lunInfo=fp>0?{fu,fp}:null;const mm=moonState&&moonState.mesh.material;if(mm&&mm.color){mm.color.setRGB(1-.42*fu,1-.78*fu,1-.88*fu);mm.color.multiplyScalar(1-.35*fp*(1-fu))}}
 const moonState=planetState.find(s=>s.b.id==='moon');
 window.__galaxyDebug={eclipse:()=>eclInfo&&{ll:localLL(eclInfo.dirW),k:eclInfo.k,total:eclInfo.total,annular:eclInfo.annular,on:eclInfo.on},lunar:()=>lunInfo,
- scr:id=>{const o=objects.find(x=>x.id===id);return o&&o._s},sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};
+ camD:id=>{const o=objects.find(x=>x.id===id);return camera.position.distanceTo(worldPos(o))},scr:id=>{const o=objects.find(x=>x.id===id);return o&&o._s},sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};
 // Saturn: ring shadow on the planet, planet shadow on the rings
 const SATU={sunPos:{value:new THREE.Vector3()},satC:{value:new THREE.Vector3()},satR:{value:4.6},ringN:{value:new THREE.Vector3(0,1,0)},rIn:{value:4.6*1.25},rOut:{value:4.6*2.3},ringMap:{value:null}};
 {const sb=BODIES.find(b=>b.id==='saturn'),ss=planetState.find(s=>s.b.id==='saturn');SATU.satR.value=sb.r;SATU.rIn.value=sb.r*1.25;SATU.rOut.value=sb.r*2.3;
@@ -1310,6 +1317,9 @@ const clock=new THREE.Clock(),v3=new THREE.Vector3();
 let fpsEma=1/60,slowFor=0,prMax=Math.min(devicePixelRatio,2),prNow=prMax;
 function adaptQuality(dt){fpsEma=fpsEma*.95+dt*.05;if(fpsEma>1/28){slowFor+=dt;if(slowFor>2.5&&prNow>.75){prNow=Math.max(.75,prNow-.5);renderer.setPixelRatio(prNow);resize();slowFor=0}}else slowFor=Math.max(0,slowFor-dt*.5)}
 const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SOLIDS=[];const _sv=new THREE.Vector3();
+function keepOutside(){if(!SOLIDS.length){SOLIDS.push({o:sunMesh,r:10*1.03});planetState.forEach(s=>SOLIDS.push({o:s.mesh,r:s.b.r*(s.b.id==='earth'?1.0015:1.04)}));MOONS.forEach(m=>SOLIDS.push({o:m.mesh,r:m.r*1.06}))}
+ for(const b of SOLIDS){b.o.getWorldPosition(_sv);const d=camera.position.distanceTo(_sv);if(d<b.r&&d>1e-6){camera.position.sub(_sv).multiplyScalar(b.r/d).add(_sv)}}}
 let lastUI=0;const prevQ=new THREE.Quaternion(),dq=new THREE.Quaternion();
 function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.25);adaptQuality(dt);
  if(live)simMs=Date.now();else if(!paused)simMs+=dt*1000*rate*dirn;
@@ -1323,11 +1333,11 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
   if(fly.surface)fly.dir=tgt.clone().sub(worldPos(earthO)).normalize();
   const camTo=fly.camTo||tgt.clone().add(fly.dir.clone().multiplyScalar(fly.dist));camera.position.lerpVectors(fly.camFrom,camTo,e);
   if(fly.t>=1)fly=null}
- controls.minDistance=focus&&focus.type==='loc'?.003:focus&&['sat','nat','quake','event','launch'].includes(focus.type)?.2:1;
+ controls.minDistance=focus&&focus.type==='loc'?.003:focus&&['sat','nat','quake','event','launch'].includes(focus.type)?.2:focus&&focus.r&&focus.mesh?Math.max(.2,focus.r*1.25):.003;
  {const dcam=camera.position.distanceTo(controls.target),nr=Math.max(1e-5,Math.min(.05,dcam*.05));if(Math.abs(nr-camera.near)/camera.near>.2){camera.near=nr;camera.updateProjectionMatrix()}}
  if(MARKERS.length){const de=camera.position.distanceTo(worldPos(earthO));if(Math.abs(de-(window.__mkD||0))>.002){window.__mkD=de;for(const m of MARKERS){const k=Math.min(m.userData.base,Math.max(.003,(de-ER)*.03));m.scale.set(k,k,1)}}}
  if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=REDUCED?.6:.35+.35*Math.sin(performance.now()/300)}
- controls.update();updateEarthSun();updateSkyFade();placeWxLabels(false);
+ controls.update();keepOutside();fadeDetail();updateEarthSun();updateSkyFade();placeWxLabels(false);
  if(window.__earthReal&&showLights){const ds=camera.position.distanceTo(worldPos(earthO))-ER;earthMesh.material.emissiveIntensity=1.7*Math.max(.15,Math.min(1,(ds-.02)/.3))}if(Math.abs(simMs-trackAt)>(live?20000:rate*0.5*1000+60000))updateTrack();renderer.render(scene,camera);
  if(performance.now()-lastUI>250){lastUI=performance.now();
   $('when').textContent=new Date(simMs).toLocaleString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
@@ -1345,7 +1355,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
    let show=vis&&(o.type==='loc'||!placed.some(q=>Math.abs(q[0]-sx)<70&&Math.abs(q[1]-sy)<18));
    if(o.type==='gal'&&cd<3000&&o.id!=='andromeda')show=false;
    if(o.type==='star'&&camera.position.distanceTo(controls.target)<80)show=false;
-   if(o===earthO&&focus&&['loc','quake','event','launch'].includes(focus.type))show=false;
+   if(o===earthO&&((focus&&['loc','quake','event','launch'].includes(focus.type))||camera.position.distanceTo(controls.target)<2.5))show=false;
    if(show&&(o.type==='quake'||o.type==='event'||o.type==='launch'))show=false;if(show){placed.push([sx,sy]);o.el.style.display='';o.el.style.left=sx+'px';o.el.style.top=sy+'px'}else o.el.style.display='none'}}
  else for(const o of objects){worldPos(o,v3);const p=v3.clone().project(camera);o._s=p.z<1&&o.obj.visible!==false&&(nearEarth||!['sat','nat','loc','quake','event','launch'].includes(o.type))?[(p.x+1)/2*innerWidth,(1-p.y)/2*innerHeight]:null}
 }
