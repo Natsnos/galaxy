@@ -7,6 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<meta name="description" content="A live 3D Solar System and Milky Way: real positions right now, photo-real planets, live Earth and space data, guided stories and fun for kids.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Interactive Galaxy">
+<meta property="og:title" content="Interactive Galaxy: the live Solar System in 3D">
+<meta property="og:description" content="Real positions right now, photo-real planets, live Earth and space data, guided stories and fun for kids.">
+<meta property="og:url" content="https://natsnos.github.io/galaxy/">
+<meta property="og:image" content="https://natsnos.github.io/galaxy/icons/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Earth in 3D next to the title Interactive Galaxy">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://natsnos.github.io/galaxy/icons/share.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#04060d">
 <link rel="icon" type="image/png" href="icons/favicon-32.png">
@@ -31,9 +43,11 @@
     <select id="goto" aria-label="Go to object"><option value="">Go to…</option></select>
     <button id="skyb">Sky view</button>
     <button id="evb">Events</button>
+    <button id="storyb" class="story">Stories</button>
     <button id="funb" class="fun">Fun for kids</button>
     <button id="kidsb" aria-pressed="false">Kids mode</button>
     <button id="helpb" aria-label="Show the tour">Tour</button>
+    <button id="langb" lang="es">Español</button>
     <button id="installb" class="install" hidden>Install app</button>
   </div>
 </header>
@@ -43,12 +57,15 @@
 <div id="fun" hidden role="dialog" aria-label="Fun for kids">
   <div class="funhead"><b>Fun for kids</b><button id="funx" aria-label="Close">×</button></div>
   <div class="tabs" role="tablist">
+    <button data-tab="stories" role="tab">Stories</button>
     <button data-tab="passport" class="on" role="tab">Space passport</button>
     <button data-tab="me" role="tab">Me in space</button>
     <button data-tab="trip" role="tab">Trip planner</button>
     <button data-tab="sizes" role="tab">Size line-up</button>
     <button data-tab="card" role="tab">Postcard</button>
+    <button data-tab="quiz" role="tab">Space quiz</button>
   </div>
+  <section data-pane="stories" hidden><p class="lead" id="stlead">Pick a story. The camera flies you through it, and it can read each step aloud.</p><div id="storylist"></div></section>
   <section data-pane="passport"><p class="lead" id="ppsum"></p><div id="badges"></div><div id="stamps"></div></section>
   <section data-pane="me" hidden>
     <p class="lead">How much would you weigh on other worlds, and how old would you be?</p>
@@ -63,9 +80,15 @@
     <div id="tripout" class="lead"></div><div class="frow"><button id="tripfly">Fly there in 3D</button></div>
   </section>
   <section data-pane="sizes" hidden><p class="lead">The Sun and planets drawn to the same scale. Scroll sideways to see them all.</p><div class="scroll" id="sizes"></div><p class="cap" id="sizefact"></p></section>
+  <section data-pane="quiz" hidden><div id="quizbox"></div></section>
   <section data-pane="card" hidden><p class="lead">Turn what you see into a postcard. Fly somewhere first, then make it.</p><div class="frow"><button id="cardgo" class="on">Make a postcard of this view</button></div><div id="cardout"></div></section>
 </div>
 <canvas id="confetti" aria-hidden="true"></canvas>
+<div id="storybar" hidden role="region" aria-label="Story">
+  <div class="sthead"><b id="sttitle"></b><span id="ststep"></span></div>
+  <p id="sttext"></p>
+  <div class="frow"><button id="stback">Back</button><button id="stnext" class="on">Next</button><button id="stvoice" aria-pressed="true">Narration on</button><button id="stexit">Exit</button></div>
+</div>
 <div id="wxlabels" aria-hidden="true"></div>
 <div id="wxfloat" hidden><b id="wxft">Temperature now</b><div class="wxbar" id="wxbar2"></div><div class="wxticks" id="wxticks2"></div><span class="cap" id="wxfh">Hover the globe for the exact reading</span></div>
 <div id="toast" hidden><span id="toasttext"></span><button id="toastx" aria-label="Dismiss">×</button></div>
@@ -83,7 +106,7 @@
   <div class="frow" id="phtog" hidden><button data-ph="photo" class="on">Real photo</button><button data-ph="model">3D model</button></div>
   <canvas id="pic" width="480" height="480"></canvas>
   <div class="cap" id="piccap">Rendered portrait from this model. Tap below for real telescope and spacecraft photos.</div>
-  <div class="frow" id="sharerow"><button id="readb">Read aloud</button><button id="copylink">Copy link to this</button><button id="postb">Postcard</button><button id="sethome" hidden>Make this my home</button></div>
+  <div class="frow" id="sharerow"><button id="readb">Read aloud</button><button id="shareb" hidden>Share</button><button id="copylink">Copy link to this</button><button id="postb">Postcard</button><button id="sethome" hidden>Make this my home</button></div>
   <details id="voicebox" hidden><summary>Voice options</summary>
     <div class="vgrid">
       <div class="frow" role="group" aria-label="Voice type"><button data-vg="female">Female voices</button><button data-vg="male">Male voices</button><button data-vg="any" class="on">All voices</button></div>
@@ -121,8 +144,8 @@
 <div id="chip" hidden><span id="chipname"></span><a id="chipg" href="#" target="_blank" rel="noopener">Google Maps ↗</a><button id="chipgo" aria-label="Fly back to the pinned place">Show</button><button id="chipx" aria-label="Remove pin">×</button></div>
 <div id="sky" hidden role="dialog" aria-label="Sky view">
   <div class="skyhead"><div><b>Sky above <span id="skyloc"></span></b><div id="skysub" class="cap" style="margin:2px 0 0"></div></div>
-  <button id="skyme">Use my location</button><button id="skyx" aria-label="Close sky view">×</button></div>
-  <canvas id="skyc"></canvas>
+  <button id="skyar" class="story">Look around</button><button id="skyme">Use my location</button><button id="skyx" aria-label="Close sky view">×</button></div>
+  <div id="skywrap"><canvas id="skyc"></canvas><div id="arstatus" hidden></div></div>
 </div>
 <div id="ctl">
   <div id="clock"><span id="live">LIVE</span><span id="when"></span><button id="ctltog" aria-expanded="false" aria-controls="ctlmore">Controls</button></div>
@@ -173,5 +196,9 @@
 <script src="js/17-motion.js"></script>
 <script src="js/18-kids.js"></script>
 <script src="js/19-app.js"></script>
+<script src="js/20-craft-quiz.js"></script>
+<script src="js/21-stories.js"></script>
+<script src="js/22-skyar.js"></script>
+<script src="js/23-share-i18n.js"></script>
 </body>
 </html>

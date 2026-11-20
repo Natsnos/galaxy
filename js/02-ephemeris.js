@@ -48,6 +48,6 @@ function orient(id,ms,q){const[a0,d0,W0,Wd]=ROT[id],N=radec(a0,d0),ar=a0*D2R;con
  const W=(W0+Wd*dJ(ms))*D2R,P=Q.clone().multiplyScalar(Math.cos(W)).add(N.clone().cross(Q).multiplyScalar(Math.sin(W)));
  mBasis.makeBasis(P,N,P.clone().cross(N));return q.setFromRotationMatrix(mBasis)}
 // compressed display distance (angles are real; distances squeezed so everything fits)
-const RMAP=[[0,12],[.39,22],[.72,30],[1,39],[1.52,50],[2.7,66],[5.2,80],[9.5,110],[19.2,140],[30.1,165],[39.5,190],[50,215],[100,260]];
-function mapR(r){for(let i=1;i<RMAP.length;i++)if(r<=RMAP[i][0]){const[a,b]=[RMAP[i-1],RMAP[i]];return a[1]+(b[1]-a[1])*(r-a[0])/(b[0]-a[0])}return 260}
+const RMAP=[[0,12],[.39,22],[.72,30],[1,39],[1.52,50],[2.7,66],[5.2,80],[9.5,110],[19.2,140],[30.1,165],[39.5,190],[50,215],[100,260],[200,300]];
+function mapR(r){for(let i=1;i<RMAP.length;i++)if(r<=RMAP[i][0]){const[a,b]=[RMAP[i-1],RMAP[i]];return a[1]+(b[1]-a[1])*(r-a[0])/(b[0]-a[0])}return RMAP[RMAP.length-1][1]}
 const disp=v=>{const r=Math.hypot(...v),k=mapR(r)/r;return eclToThree(v[0]*k,v[1]*k,v[2]*k)};

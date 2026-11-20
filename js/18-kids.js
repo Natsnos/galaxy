@@ -77,7 +77,7 @@ function speak(text,onend){if(!canSpeak)return;speechSynthesis.cancel();const u=
  u.onend=u.onerror=()=>{$('readb').textContent='Read aloud';onend&&onend()};speechSynthesis.speak(u);window.__lastUtter={text,voice:v?v.name:'default',rate:u.rate,pitch:u.pitch}}
 $('voicetest').onclick=()=>speak(focus?`Hi! I can read about ${focus.name} for you.`:'Hi! I can read about anything in space for you.');
 $('readb').onclick=()=>{if(!canSpeak||!focus)return;if(speechSynthesis.speaking){speechSynthesis.cancel();$('readb').textContent='Read aloud';return}
- speak(readText(focus));$('readb').textContent='Stop reading'};
+ speak(readText(focus));$('readb').textContent=tr('Stop reading','Dejar de leer')};
 
 /* ---------- space passport ---------- */
 const STAMP_IDS=['sun','mercury','venus','earth','moon','mars','jupiter','saturn','uranus','neptune','pluto','io','europa','ganymede','callisto','titan','enceladus','triton','charon','phobos','belt','halley','encke','halebopp','iss','tiangong','hubble','jwst','proxima','acen','sirius','vega','polaris','betelgeuse','rigel','milky','andromeda','sgra'];
@@ -99,16 +99,16 @@ $('stamps').addEventListener('click',e=>{const b=e.target.closest('[data-go]');i
 /* ---------- extend the info card: kid words, did-you-know, stamps ---------- */
 {const _show=showInfo;showInfo=function(o){_show(o);const k=KIDS[o.id];
  if(kidsMode&&k){$('idesc').textContent=k[0];$('kidfact').innerHTML=`<b>Did you know?</b> ${k[1]}`;$('kidfact').hidden=false}else $('kidfact').hidden=true;
- const st=collect(o);$('stamp').hidden=st!=='new';if(st==='new')$('stamp').textContent=`New passport stamp: ${o.name}! You have ${stamps.size} of ${STAMP_IDS.length}.`;
+ const st=collect(o);$('stamp').hidden=st!=='new';if(st==='new')$('stamp').textContent=tr(`New passport stamp: ${o.name}! You have ${stamps.size} of ${STAMP_IDS.length}.`,`¡Nuevo sello en tu pasaporte: ${o.name}! Tienes ${stamps.size} de ${STAMP_IDS.length}.`);
  if(canSpeak&&speechSynthesis.speaking){speechSynthesis.cancel()}$('readb').textContent='Read aloud';$('postb').hidden=o.type==='events'}}
 {const _c=$('close').onclick;$('close').onclick=e=>{if(canSpeak)speechSynthesis.cancel();_c(e)}}
-{const _t=showToast;showToast=function(t,k){if(kidsMode&&/^The ISS/.test(t))t+=' Go outside and wave at the astronauts!';_t(t,k)}}
+{const _t=showToast;showToast=function(t,k){if(kidsMode&&/^The ISS/.test(t))t+=tr(' Go outside and wave at the astronauts!',' ¡Sal afuera y saluda a los astronautas!');_t(t,k)}}
 
 /* ---------- Me in space ---------- */
 const WORLDS=[['Mercury',.378,87.969],['Venus',.907,224.701],['Earth',1,365.256],['The Moon',.166,null],['Mars',.377,686.98],['Jupiter',2.53,4332.59],['Saturn',1.065,10759.22],['Uranus',.886,30688.5],['Neptune',1.14,60182],['Pluto',.063,90560],['The Sun',27.9,null]];
 function renderMe(){const w=parseFloat($('mew').value),u=$('meu').value,b=$('meb').value?new Date($('meb').value+'T12:00:00'):null,now=Date.now();
  try{localStorage.setItem('galaxy.me',JSON.stringify({w:$('mew').value,u,b:$('meb').value}))}catch(e){}
- const days=b?(now-b.getTime())/864e5:null,fd=t=>new Date(t).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+ const days=b?(now-b.getTime())/864e5:null,fd=t=>new Date(t).toLocaleDateString(window.LANG==='es'?'es':undefined,{year:'numeric',month:'short',day:'numeric'});
  $('metable').innerHTML='<tr><th>World</th><th>Your weight</th><th>Your age there</th><th>Next birthday there</th></tr>'+WORLDS.map(([n,g,P])=>{
   const wt=w>0?`${(w*g).toFixed(w*g<10?1:0)} ${u}`:'—';let age='—',nb='—';
   if(days>0&&P){const a=days/P;age=a<1?`${(a*12).toFixed(1)} months`:`${a<100?a.toFixed(1):Math.floor(a)} years`;
@@ -147,7 +147,7 @@ function makePostcard(){renderer.render(scene,camera);let shot;try{shot=renderer
   const s=Math.max((W-48)/img.width,(H-48)/img.height),iw=img.width*s,ih=img.height*s;g.save();g.beginPath();g.rect(24,24,W-48,H-48);g.clip();g.drawImage(img,(W-iw)/2,(H-ih)/2,iw,ih);
   const gr=g.createLinearGradient(0,H-300,0,H);gr.addColorStop(0,'#0000');gr.addColorStop(1,'#000c');g.fillStyle=gr;g.fillRect(24,H-300,W-48,276);g.restore();
   const place=focus?(focus.type==='loc'?focus.name:focus.id==='events'?'space':focus.name):'the Solar System';
-  g.fillStyle='#fff';g.font='700 64px "Space Grotesk",sans-serif';g.fillText(`Greetings from ${place}!`.slice(0,40),60,H-110);
+  g.fillStyle='#fff';g.font='700 64px "Space Grotesk",sans-serif';g.fillText(tr(`Greetings from ${place}!`,`¡Saludos desde ${place}!`).slice(0,40),60,H-110);
   g.font='28px "Space Grotesk",sans-serif';g.fillStyle='#ffe7b0';g.fillText(new Date(simMs).toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' · Interactive Galaxy',60,H-60);
   g.save();g.translate(W-130,120);g.rotate(.12);g.strokeStyle='#d6336c';g.lineWidth=6;g.beginPath();g.arc(0,0,70,0,7);g.stroke();g.beginPath();g.arc(0,0,56,0,7);g.stroke();
   g.fillStyle='#d6336c';g.font='700 22px "Space Grotesk",sans-serif';g.textAlign='center';g.fillText('SPACE',0,-6);g.fillText('POST',0,22);g.restore();

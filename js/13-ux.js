@@ -38,7 +38,7 @@ $('sethome').onclick=()=>{if(focus&&focus.type==='loc'){setHome({name:focus.name
 // true distances
 let trueScale=false;const RMAP_C=RMAP.map(x=>x.slice());
 $('scaleb').onclick=()=>{trueScale=!trueScale;$('scaleb').classList.toggle('on',trueScale);
- RMAP.length=0;(trueScale?[[0,0],[1,39],[100,3900]]:RMAP_C).forEach(x=>RMAP.push(x.slice()));
+ RMAP.length=0;(trueScale?[[0,0],[1,39],[100,3900],[1000,39000]]:RMAP_C).forEach(x=>RMAP.push(x.slice()));
  objects.find(o=>o.id==='belt').spin.scale.setScalar(trueScale?1.6:1);starGroup.scale.setScalar(trueScale?6:1);orbitAt=-1e15;
  VIEWS.solar.c=trueScale?[0,650,1750]:[0,90,210];VIEWS.stars.c=trueScale?[5000,8000,20000]:[900,1400,3600];
  showToast(trueScale?'True distances: the planets are now spaced like the real Solar System. They’re still drawn huge, because at true size even Jupiter would be a speck smaller than a pixel.':'Back to the compact view, with distances squeezed so everything fits.','scale');setTimeout(()=>{if($('toast').dataset.key==='scale')$('toast').hidden=true},9000);

@@ -12,7 +12,9 @@ const trails=planetState.map(st=>{const g=new THREE.BufferGeometry(),pos=new Flo
  (st.b.parent?st.holder.parent:scene).add(line);(st.b.parent?st.holder.parent:scene).add(dots);
  // how far back each trail reaches: about an eighth of an orbit (the Moon: 4 days)
  return{st,line,dots,pos,span:(st.b.parent?4:st.b.P*.12)*864e5}});
+const _tp=new THREE.Vector3();
 function updateTrails(){if(!trailsOn)return;for(const t of trails){const{st,pos,span}=t;
+ const near=st.b.parent?(camera.position.distanceTo(earthHolder.getWorldPosition(_tp))<4||camera.position.distanceTo(st.holder.getWorldPosition(_tp))<4):camera.position.distanceTo(st.holder.getWorldPosition(_tp))<Math.max(22,st.b.r*9);t.line.visible=t.dots.visible=!near;if(near)continue;
  for(let i=0;i<TRAIL_N;i++){const ms=simMs-span*(1-i/(TRAIL_N-1));const v=st.b.parent?eclToThree(...moonGeo(ms).v).multiplyScalar(st.b.a):disp(helio(st.b.id,ms));pos[i*3]=v.x;pos[i*3+1]=v.y;pos[i*3+2]=v.z}
  t.line.geometry.attributes.position.needsUpdate=true}}
 FRAME_HOOKS.push(updateTrails);
@@ -31,9 +33,9 @@ function timelapseRate(){const f=focus,id=f&&f.id;
 function startTimelapse(){const[r,why]=timelapseRate();rate=r;const sel=$('rate');sel.value=[...sel.options].some(o=>+o.value===r)?String(r):sel.value;paused=false;dirn=1;setLive(false);
  $('pause').textContent='❚❚';$('pause').classList.remove('on');$('rev').classList.remove('on');tl={until:performance.now()+25000,why};orbitLines.forEach(l=>{l.userData.op=l.userData.op??l.material.opacity;l.material.opacity=l.userData.op*.35});$('watchb').classList.add('on');
  showToast(why,'tl');setTimeout(()=>{if($('toast').dataset.key==='tl')$('toast').hidden=true},6000)}
-function stopTimelapse(){tl=null;orbitLines.forEach(l=>{if(l.userData.op!=null)l.material.opacity=l.userData.op});$('watchb').classList.remove('on');$('watchb').textContent='Watch it move';$('now').click()}
+function stopTimelapse(){tl=null;orbitLines.forEach(l=>{if(l.userData.op!=null)l.material.opacity=l.userData.op});$('watchb').classList.remove('on');$('watchb').textContent=tr('Watch it move','Verlo moverse');$('now').click()}
 $('watchb').onclick=()=>tl?stopTimelapse():startTimelapse();
-UI_HOOKS.push(()=>{if(!tl)return;const left=Math.ceil((tl.until-performance.now())/1000);if(left<=0)stopTimelapse();else $('watchb').textContent=`Back to live in ${left}s · Stop`});
+UI_HOOKS.push(()=>{if(!tl)return;const left=Math.ceil((tl.until-performance.now())/1000);if(left<=0)stopTimelapse();else $('watchb').textContent=tr(`Back to live in ${left}s · Stop`,`En vivo en ${left} s · Parar`)});
 
 /* ---------- sounds (made in the browser, no files): a soft space hum and a whoosh when flying ---------- */
 let audio=null,soundOn=false;

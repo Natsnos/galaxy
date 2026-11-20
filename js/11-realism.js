@@ -47,7 +47,7 @@ function updateEclipses(){if(!HP.earth||!moonNow)return;const AUkm=149597870.7,R
  eclInfo=k>0?{total:h>=0&&ru>0,annular:h>=0&&ru<=0,on:h>=0,dirW:ECLW.clone(),k}:null;
  const dES=Math.hypot(...E)*AUkm,anti=E.map(x=>x/Math.hypot(...E)),cs=moonNow.v[0]*anti[0]+moonNow.v[1]*anti[1]+moonNow.v[2]*anti[2],sep=moonNow.km*Math.sqrt(Math.max(0,1-cs*cs));
  const uR=Re-moonNow.km*(Rs-Re)/dES,pR=Re+moonNow.km*(Rs+Re)/dES,fu=cs>0?Math.max(0,Math.min(1,(uR+Rm-sep)/(2*Rm))):0,fp=cs>0?Math.max(0,Math.min(1,(pR+Rm-sep)/(2*Rm))):0;
- lunInfo=fp>0?{fu,fp}:null;const mm=moonState&&moonState.mesh.material;if(mm&&mm.color){mm.color.setRGB(1-.42*fu,1-.78*fu,1-.88*fu);mm.color.multiplyScalar(1-.35*fp*(1-fu))}}
+ lunInfo=fp>0?{fu,fp}:null;subsolar.visible=!(eclInfo&&eclInfo.on);const mm=moonState&&moonState.mesh.material;if(mm&&mm.color){mm.color.setRGB(1-.42*fu,1-.78*fu,1-.88*fu);mm.color.multiplyScalar(1-.35*fp*(1-fu))}}
 const moonState=planetState.find(s=>s.b.id==='moon');
 window.__galaxyDebug={eclipse:()=>eclInfo&&{ll:localLL(eclInfo.dirW),k:eclInfo.k,total:eclInfo.total,annular:eclInfo.annular,on:eclInfo.on},lunar:()=>lunInfo,
  camD:id=>{const o=objects.find(x=>x.id===id);return camera.position.distanceTo(worldPos(o))},scr:id=>{const o=objects.find(x=>x.id===id);return o&&o._s},sunSide:()=>{const e=worldPos(earthO),d=ECLW.clone();focus=null;fly=null;controls.target.copy(e);camera.position.copy(e.clone().add(d.multiplyScalar(7)))}};

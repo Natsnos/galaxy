@@ -20,6 +20,11 @@ A live, interactive 3D model of the Solar System and the Milky Way. Live site: *
 
 - **See things move.** Glowing trails behind the planets and the Moon, and *Watch it move*: a 25-second time-lapse that suits what you're looking at. There's an optional ambient space sound.
 - **Fun for kids.** *Kids mode* uses simple words and adds "Did you know?" facts, and any card can be read aloud. There's also a space passport with stamps and badges, *Me in space* (your weight and age on other worlds), a trip planner that uses real distances, a size line-up and postcards.
+- **Guided stories.** Narrated adventures that fly the camera and move the clock: Tour of the planets, Why we have seasons, How eclipses work, Journey to Mars, and Our place in the galaxy.
+- **Look around.** Point a phone or tablet at the sky (compass and tilt) to see the stars, planets, Moon and ISS in that direction. On a computer, drag to look around.
+- **Spacecraft and quiz.** Voyager 1 and 2, New Horizons and the Parker Solar Probe, plus a kids' space quiz that earns a passport stamp.
+- **Español.** Switch the interface, kids text, quiz, stories and tour to Spanish, with a Spanish read-aloud voice. Detailed fact tables stay in English.
+- **Sharing.** A preview picture when the link is shared, and a Share button on phones.
 - **Install as an app.** It has a home-screen icon and runs full screen. Planets and saved maps work offline, and live data returns when you reconnect.
 
 ## Keyboard
@@ -49,6 +54,10 @@ A live, interactive 3D model of the Solar System and the Milky Way. Live site: *
 | 17-motion | Trails, Watch it move, sounds |
 | 18-kids | The Kids Pack |
 | 19-app | Install-as-app and offline notices (`sw.js` is the offline cache) |
+| 20-craft-quiz | Spacecraft (Voyager 1 & 2, New Horizons, Parker) and the Space quiz |
+| 21-stories | Guided, narrated stories |
+| 22-skyar | Look around: the sky in the direction your phone points |
+| 23-share-i18n | Share button and Spanish translation (`tr()` and the `ES` dictionary) |
 
 When you change a file that's listed in `sw.js`, bump `VERSION` there so installed copies pick up the change.
 

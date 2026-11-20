@@ -4,6 +4,9 @@
 const $=id=>document.getElementById(id);
 // later modules add per-frame and per-quarter-second work here
 const FRAME_HOOKS=[],UI_HOOKS=[];
+// language: 'en' or 'es'; tr(english, spanish) picks the current one
+window.LANG=(()=>{try{const s=localStorage.getItem('galaxy.lang');if(s)return s}catch(e){}return(navigator.language||'').toLowerCase().startsWith('es')?'es':'en'})();
+const tr=(en,es)=>window.LANG==='es'?es:en;
 const NASA=s=>'https://science.nasa.gov/'+s;
 const WIKI=s=>'https://en.wikipedia.org/wiki/'+s;
 const IMG=q=>'https://images.nasa.gov/search?q='+encodeURIComponent(q)+'&media=image';
