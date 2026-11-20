@@ -15,11 +15,21 @@ const TOUR=[[null,'<b>Welcome to the live Solar System</b>Everything you see is 
 let tourI=0;
 function maybeTour(){let seen=false;try{seen=localStorage.getItem('galaxy.tour')==='done'}catch(e){}if(!seen&&!location.hash)startTour()}
 function startTour(){tourI=0;$('tour').hidden=false;showTourStep()}
-function showTourStep(){document.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));$('ctl').classList.remove('open');const[sel,html]=TOUR[tourI];$('ttext').innerHTML=html;$('tstep').textContent=`${tourI+1} of ${TOUR.length}`;
- $('tback').hidden=tourI===0;$('tnext').textContent=tourI===TOUR.length-1?'Done':'Next';if(sel){const el=$(sel.slice(1));if(el){if(['#ctl','#watchb','#scaleb'].includes(sel))$('ctl').classList.add('open');el.classList.add('hl')}}}
-function endTour(){$('tour').hidden=true;$('ctl').classList.remove('open');document.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));try{localStorage.setItem('galaxy.tour','done')}catch(e){}}
+function showTourStep(){document.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));tourCtl(false);const[sel,html]=TOUR[tourI];$('ttext').innerHTML=html;$('tstep').textContent=`${tourI+1} of ${TOUR.length}`;
+ $('tback').hidden=tourI===0;$('tnext').textContent=tourI===TOUR.length-1?'Done':'Next';if(sel){const el=$(sel.slice(1));if(el){if(['#ctl','#watchb','#scaleb'].includes(sel))tourCtl(true);el.classList.add('hl')}}}
+function endTour(){$('tour').hidden=true;tourCtl(false);document.querySelectorAll('.hl').forEach(e=>e.classList.remove('hl'));try{localStorage.setItem('galaxy.tour','done')}catch(e){}}
 $('tnext').onclick=()=>{if(tourI<TOUR.length-1){tourI++;showTourStep()}else endTour()};$('tback').onclick=()=>{if(tourI>0){tourI--;showTourStep()}};$('tskip').onclick=endTour;$('helpb').onclick=startTour;
-$('ctltog').onclick=()=>{const o=$('ctl').classList.toggle('open');$('ctltog').setAttribute('aria-expanded',o)};
+const CTL={open:false,min:false};try{Object.assign(CTL,JSON.parse(localStorage.getItem('galaxy.ctl')||'{}'))}catch(e){}
+function ctlApply(){const c=$('ctl');c.classList.toggle('open',CTL.open);c.classList.toggle('min',CTL.min);
+ $('ctltog').setAttribute('aria-expanded',CTL.open);$('ctltog').textContent=tr(CTL.open?'Less':'More',CTL.open?'Menos':'Más');
+ const m=$('ctlmin');m.textContent=CTL.min?'+':'–';m.setAttribute('aria-expanded',!CTL.min);
+ const l=CTL.min?tr('Show controls','Mostrar controles'):tr('Minimize controls','Minimizar controles');m.setAttribute('aria-label',l);m.title=l}
+function ctlSave(){try{localStorage.setItem('galaxy.ctl',JSON.stringify(CTL))}catch(e){}}
+$('ctltog').onclick=()=>{CTL.open=!CTL.open;ctlApply();ctlSave()};
+$('ctlmin').onclick=()=>{CTL.min=!CTL.min;ctlApply();ctlSave()};
+/* the tour may open the panel temporarily without changing the saved choice */
+function tourCtl(on){const c=$('ctl');if(on){c.classList.remove('min');c.classList.add('open')}else ctlApply()}
+ctlApply();
 // shareable links: #mars, #io, #iss, #place-407128n-740060w-white-house, #sky, #events, #milky-way …
 const slugId=id=>String(id).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
 function slugOf(o){if(!o)return'';if(o.type==='events')return'events';if(o.type==='loc'){const f=x=>Math.round(Math.abs(x)*1e4);const nm=slugId(o.name||'').slice(0,40);return`place-${f(o.lat)}${o.lat<0?'s':'n'}-${f(o.lon)}${o.lon<0?'w':'e'}${nm&&nm!=='pinned-spot'?'-'+nm:''}`}return o.id?slugId(o.id):''}

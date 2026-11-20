@@ -148,10 +148,9 @@
   <div id="skywrap"><canvas id="skyc"></canvas><div id="arstatus" hidden></div></div>
 </div>
 <div id="ctl">
-  <div id="clock"><span id="live">LIVE</span><span id="when"></span><button id="ctltog" aria-expanded="false" aria-controls="ctlmore">Controls</button></div>
-  <div id="ctlmore">
+  <div id="clock"><span id="live">LIVE</span><span id="when"></span><button id="ctltog" aria-expanded="false" aria-controls="ctlmore">More</button><button id="ctlmin" aria-expanded="true" aria-label="Minimize controls" title="Minimize">–</button></div>
+  <div id="ctlmain">
   <div class="row">
-    <button id="rev" aria-label="Run time backwards" title="Reverse">⏪</button>
     <button id="pause" aria-label="Pause">❚❚</button>
     <select id="rate" aria-label="Time speed">
       <option value="1">Real time</option><option value="60">1 min / sec</option><option value="3600">1 hour / sec</option><option value="21600">6 hours / sec</option>
@@ -159,9 +158,14 @@
     </select>
     <button id="now" class="on">Now</button>
     <button id="watchb" class="watch">Watch it move</button>
+  </div>
+  <div id="isshome" class="cap" style="margin:0"></div>
+  <div id="ctlmore">
+  <div class="row">
+    <button id="rev" aria-label="Run time backwards" title="Reverse">⏪</button>
     <input id="pick" type="datetime-local" aria-label="Jump to date and time">
   </div>
-  <div class="row">
+  <div class="row chips">
     <button id="orb" class="on">Orbits</button>
     <button id="lab" class="on">Labels</button>
     <button id="lights" class="on">City lights</button>
@@ -169,9 +173,11 @@
     <button id="trailb" class="on">Trails</button>
     <button id="soundb" aria-pressed="false">Sound</button>
   </div>
+  <details id="ctlinfo"><summary>Live feeds &amp; credits</summary>
   <div id="feeds" class="cap" style="margin:0"></div>
-  <div id="isshome" class="cap" style="margin:0"></div>
   <div class="credits">Keys: / search · Space pause · N now · + and − change speed · Esc close.<br>Planet maps: Solar System Scope (CC BY 4.0) · Earth maps: NASA via three.js · Imagery: Esri, NASA GIBS · Data: NASA, NOAA, USGS, CelesTrak, Open-Meteo, OpenStreetMap, The Space Devs</div>
+  </details>
+  </div>
   </div>
 </div>
 

@@ -8,7 +8,7 @@ $('shareb').onclick=async()=>{const n=focus?focus.name:'';try{await navigator.sh
 /* ---------- Spanish ---------- */
 // exact interface strings → Spanish (object names included, so labels, menus and card titles switch too)
 const ES={'Solar system':'Sistema solar','Nearby stars':'Estrellas cercanas','Milky Way':'Vía Láctea','Go to…':'Ir a…','Sky view':'Ver el cielo','Events':'Eventos','Stories':'Historias','Fun for kids':'Diversión para niños','Kids mode':'Modo niños','Tour':'Guía','Install app':'Instalar app','Go':'Ir',
- 'Now':'Ahora','Watch it move':'Verlo moverse','Orbits':'Órbitas','Labels':'Etiquetas','City lights':'Luces de ciudades','True distances':'Distancias reales','Trails':'Estelas','Sound':'Sonido','Controls':'Controles',
+ 'Now':'Ahora','Watch it move':'Verlo moverse','Orbits':'Órbitas','Labels':'Etiquetas','City lights':'Luces de ciudades','True distances':'Distancias reales','Trails':'Estelas','Sound':'Sonido','Controls':'Controles','More':'Más','Less':'Menos','Live feeds & credits':'Datos en vivo y créditos',
  'Real time':'Tiempo real','1 min / sec':'1 min/seg','1 hour / sec':'1 hora/seg','6 hours / sec':'6 horas/seg','1 day / sec':'1 día/seg','1 week / sec':'1 semana/seg','2 weeks / sec':'2 semanas/seg','1 month / sec':'1 mes/seg','1 year / sec':'1 año/seg',
  'LIVE':'EN VIVO','PAUSED':'PAUSA','REWIND':'RETROCESO','SIMULATED':'SIMULADO',
  'Right now (at the time shown)':'Ahora mismo (a la hora indicada)','Facts':'Datos','Read aloud':'Leer en voz alta','Stop reading':'Dejar de leer','Copy link to this':'Copiar enlace','Link copied':'Enlace copiado','Postcard':'Postal','Share':'Compartir','Real photo':'Foto real','3D model':'Modelo 3D',
@@ -147,6 +147,7 @@ const TOUR_ES=['<b>Bienvenido al sistema solar en vivo</b>Todo lo que ves está 
 // switch language
 function applyLang(){const es=window.LANG==='es';document.documentElement.lang=es?'es':'en';$('langb').textContent=es?'English':'Español';$('langb').lang=es?'en':'es';
  trBusy=true;try{trTree(document.body)}finally{trBusy=false}
+ if(typeof ctlApply==='function')ctlApply();
  if(focus&&$('info').classList.contains('open'))showInfo(focus);if(!$('tour').hidden)showTourStep();if(typeof story!=='undefined'&&story)showStep();if(!$('fun').hidden){const t=document.querySelector('[data-tab].on');if(t)openFun(t.dataset.tab)}}
 $('langb').onclick=()=>{window.LANG=window.LANG==='es'?'en':'es';try{localStorage.setItem('galaxy.lang',window.LANG)}catch(e){}applyLang()};
 applyLang();
