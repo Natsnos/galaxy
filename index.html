@@ -45,6 +45,11 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
 #ll{font:inherit;font-size:16px;color:var(--ink);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:10px;min-height:40px;padding:0 10px}
 #ilinks{display:grid;gap:6px}
 .lb.sat{color:#9fffd0;font-size:12px}
+#chip{position:fixed;top:64px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid #ff5a5a88;border-radius:999px;padding:4px 6px 4px 14px;backdrop-filter:blur(8px);max-width:calc(100vw - 24px);z-index:5}
+#chip span{font-weight:700;color:#ff9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}
+#chip a{color:#1a1000;background:var(--acc);border-radius:999px;padding:8px 12px;text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}
+#chip button{min-height:34px;border-radius:999px;padding:0 12px}#chipx{width:34px;padding:0!important}
+@media(max-width:700px){#chip{top:auto;bottom:calc(62vh + 14px)}}
 #srch{display:flex;gap:6px;flex:1 1 280px;max-width:460px}
 #q{flex:1;font:inherit;font-size:16px;color:var(--ink);background:rgba(255,255,255,.09);border:1px solid var(--line);border-radius:10px;min-height:40px;padding:0 12px}
 #q:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -121,12 +126,15 @@ input[type=datetime-local]{font:inherit;font-size:16px;color:var(--ink);backgrou
     <div class="frow"><input id="ll" placeholder="Address, place, or lat, lon" aria-label="Address, place, or latitude and longitude"><button id="flyll">Go</button></div>
     <div class="frow"><button id="myloc">Use my location</button><button id="skyhere">Sky view from here</button></div>
     <div id="llerr" class="cap"></div>
+    <div id="zoomx" hidden><div class="sub">Zoom in on this place</div><div class="frow"><button data-z="region">Region</button><button data-z="city">City</button><button data-z="street">Street</button></div><div id="detailcap" class="cap"></div></div>
+    <div id="wxx" hidden><div class="sub">Live weather on the globe</div><div class="frow"><button data-wx="clouds">Clouds</button><button data-wx="temp">Temperature</button><button data-wx="precip">Rain & snow</button><button data-wx="off">Off</button></div><div id="wxcap" class="cap"></div></div>
     <div id="imgx" hidden><div class="sub">Earth imagery</div><div class="frow"><button data-img="map">Map</button><button data-img="bm">Blue Marble</button><button data-img="yday">Yesterday from space</button></div></div>
   </div>
   <div id="extra"></div>
   <p id="idesc"></p>
   <div id="ilinks"></div>
 </aside>
+<div id="chip" hidden><span id="chipname"></span><a id="chipg" href="#" target="_blank" rel="noopener">Google Maps ↗</a><button id="chipgo" aria-label="Fly back to the pinned place">Show</button><button id="chipx" aria-label="Remove pin">×</button></div>
 <div id="sky" hidden role="dialog" aria-label="Sky view">
   <div class="skyhead"><div><b>Sky above <span id="skyloc"></span></b><div id="skysub" class="cap" style="margin:2px 0 0"></div></div>
   <button id="skyme">Use my location</button><button id="skyx" aria-label="Close sky view">×</button></div>
@@ -538,7 +546,24 @@ for(const[i,[pl,plo]]of AUR.entries()){const pole=llLocal(pl,plo,1).normalize(),
 const PLACES=[['New York',40.7128,-74.006,'America/New_York'],['Los Angeles',34.0522,-118.2437,'America/Los_Angeles'],['Chicago',41.8781,-87.6298,'America/Chicago'],['Grand Canyon',36.1069,-112.1129,'America/Phoenix'],['Kennedy Space Center',28.5729,-80.649,'America/New_York'],['Mexico City',19.4326,-99.1332,'America/Mexico_City'],['Honolulu',21.3069,-157.8583,'Pacific/Honolulu'],['Anchorage',61.2181,-149.9003,'America/Anchorage'],['Amazon (Manaus)',-3.119,-60.0217,'America/Manaus'],['Rio de Janeiro',-22.9068,-43.1729,'America/Sao_Paulo'],['Reykjavík',64.1466,-21.9426,'Atlantic/Reykjavik'],['London',51.5074,-0.1278,'Europe/London'],['Paris',48.8566,2.3522,'Europe/Paris'],['Rome',41.9028,12.4964,'Europe/Rome'],['Pyramids of Giza',29.9792,31.1342,'Africa/Cairo'],['Sahara Desert',23.4162,25.6628,'Africa/Tripoli'],['Nairobi',-1.2921,36.8219,'Africa/Nairobi'],['Dubai',25.2048,55.2708,'Asia/Dubai'],['Mumbai',19.076,72.8777,'Asia/Kolkata'],['Mount Everest',27.9881,86.925,'Asia/Kathmandu'],['Beijing',39.9042,116.4074,'Asia/Shanghai'],['Tokyo',35.6762,139.6503,'Asia/Tokyo'],['Sydney',-33.8688,151.2093,'Australia/Sydney'],['South Pole',-90,0,'Antarctica/McMurdo']];
 $('place').innerHTML=PLACES.map((p,i)=>`<option value="${i}">${p[0]}</option>`).join('');
 const pin=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex('#ff5a5a',.25),blending:THREE.AdditiveBlending,transparent:true,depthWrite:false}));pin.scale.set(.18,.18,1);pin.visible=false;earthMesh.add(pin);
-const locO=reg({id:'loc',name:'Location',kind:'Place on Earth',facts:[],desc:''},pin,'loc',1.3);
+const locO=reg({id:'loc',name:'Location',kind:'Place on Earth',facts:[],desc:''},pin,'loc',.35);
+const pinRing=new THREE.Sprite(new THREE.SpriteMaterial({map:(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.strokeStyle='#ff5a5a';g.lineWidth=8;g.beginPath();g.arc(64,64,52,0,7);g.stroke();return new THREE.CanvasTexture(c)})(),transparent:true,depthWrite:false}));pin.add(pinRing);
+// real satellite imagery draped on the globe around a place (Esri World Imagery), at three detail levels
+const DETAIL=[['region',8,.35],['city',1.2,.06],['street',.16,.009]];let detailMeshes=[];
+const esri=(w,s_,e,n)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${w},${s_},${e},${n}&bboxSR=4326&imageSR=4326&size=1024,1024&format=jpg&f=image`;
+function loadDetail(lat,lon){detailMeshes.forEach(m=>{earthMesh.remove(m);m.geometry.dispose&&m.geometry.dispose()});detailMeshes=[];if(Math.abs(lat)>84){$('detailcap').textContent='';return}
+ let done=0;DETAIL.forEach(([nm,dLat],i)=>{const dLon=Math.min(60,dLat/Math.max(.15,Math.cos(lat*D2R))),N=Math.min(85,lat+dLat/2),S=Math.max(-85,lat-dLat/2),W=lon-dLon/2,E=lon+dLon/2;
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{if(locO.lat!==lat||locO.lon!==lon)return;const t=new THREE.Texture(img);t.needsUpdate=true;
+   const g=new THREE.SphereGeometry(ER*(1.0004+i*.00025),48,48,(W+180)*D2R,dLon*D2R,(90-N)*D2R,(N-S)*D2R);
+   const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:t,emissiveMap:t,emissive:0xffffff,emissiveIntensity:.12,roughness:1,transparent:true,depthWrite:i===0}));m.renderOrder=2+i;earthMesh.add(m);detailMeshes.push(m);
+   done++;FEED['satellite imagery (Esri)']=true;feedMsg();$('detailcap').textContent='Real satellite imagery: Esri World Imagery (Esri, Maxar, Earthstar Geographics). Scroll or pinch to zoom closer.'};
+  img.onerror=()=>{FEED['satellite imagery (Esri)']=false;feedMsg()};img.src=esri(W,S,E,N)})}
+function zoomTo(level){const d=DETAIL.find(x=>x[0]===level);if(!d||!pin.visible)return;focus=locO;fly={t:0,from:controls.target.clone(),camFrom:camera.position.clone(),dist:d[2],dir:new THREE.Vector3(),obj:locO,surface:true};
+ document.querySelectorAll('[data-z]').forEach(b=>b.classList.toggle('on',b.dataset.z===level))}
+document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>zoomTo(b.dataset.z));
+$('chipgo').onclick=()=>select(locO);
+$('chipx').onclick=()=>{pin.visible=false;$('chip').hidden=true;detailMeshes.forEach(m=>earthMesh.remove(m));detailMeshes=[];if(focus===locO){focus=null;$('info').classList.remove('open')}};
 const fmtLL=(lat,lon)=>`${Math.abs(lat).toFixed(2)}° ${lat<0?'S':'N'}, ${Math.abs(lon).toFixed(2)}° ${lon<0?'W':'E'}`;
 function flyToPlace(name,lat,lon,tz,info={}){pin.position.copy(llLocal(lat,lon,ER*1.004));pin.visible=true;const full=info.full||null,gq=encodeURIComponent(full||`${lat},${lon}`);
  Object.assign(locO,{name,lat,lon,tz,full,wx:null,kind:'Place on Earth · '+fmtLL(lat,lon),facts:(full?[['Address',full]]:[]).concat([['Latitude',lat.toFixed(5)+'°'],['Longitude',lon.toFixed(5)+'°']]),
@@ -548,7 +573,8 @@ function flyToPlace(name,lat,lon,tz,info={}){pin.position.copy(llLocal(lat,lon,E
    ['Google Earth 3D ↗',`https://earth.google.com/web/@${lat},${lon},0a,4000d,35y,0h,45t,0r`],
    ['Live weather radar & wind — Windy ↗',`https://www.windy.com/?${lat.toFixed(3)},${lon.toFixed(3)},9`],
    ['Live satellite clouds — Zoom Earth ↗',`https://zoom.earth/maps/satellite/#view=${lat.toFixed(3)},${lon.toFixed(3)},7z`]]});
- locO.el.textContent=name;$('q').value='';select(locO)}
+ locO.el.textContent=name;$('q').value='';
+ $('chip').hidden=false;$('chipname').textContent=name;$('chipg').href=locO.links[0][1];loadDetail(lat,lon);select(locO);document.querySelectorAll('[data-z]').forEach(b=>b.classList.toggle('on',b.dataset.z==='region'))}
 $('flyp').onclick=()=>{const p=PLACES[$('place').value];flyToPlace(...p)};
 const parseLL=()=>{const m=$('ll').value.match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);if(!m)return null;const lat=+m[1],lon=+m[2];return Math.abs(lat)<=90&&Math.abs(lon)<=180?[lat,lon]:null};
 $('flyll').onclick=()=>runSearch($('ll').value,$('llerr'));
@@ -686,8 +712,8 @@ async function loadPhoto(o){const img=$('photo'),title=o.type==='loc'?(PLACE_WIK
 const gibs=(layer,date)=>`https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=${layer}&CRS=EPSG:4326&BBOX=-90,-180,90,180&WIDTH=2048&HEIGHT=1024&FORMAT=image/jpeg${date?'&TIME='+date:''}`;
 const earthTex={};let mapTex=null;
 function setEarthImg(kind){document.querySelectorAll('[data-img]').forEach(b=>b.classList.toggle('on',b.dataset.img===kind));const cl=BODIES.find(b=>b.id==='earth')._cl;
- if(kind==='map'){if(mapTex){earthMesh.material.map=mapTex;earthMesh.material.needsUpdate=true}cl.visible=true;return}
- const use=t=>{earthMesh.material.map=t;earthMesh.material.needsUpdate=true;cl.visible=kind!=='yday'};
+ if(kind==='map'){if(mapTex){earthMesh.material.map=mapTex;earthMesh.material.needsUpdate=true}cl.visible=wxMode!=='off';return}
+ const use=t=>{earthMesh.material.map=t;earthMesh.material.needsUpdate=true;cl.visible=kind!=='yday'&&wxMode!=='off'};
  if(earthTex[kind]){use(earthTex[kind]);return}
  const y=new Date(Date.now()-864e5).toISOString().slice(0,10),img=new Image();img.crossOrigin='anonymous';
  img.onload=()=>{const t=new THREE.Texture(img);t.needsUpdate=true;earthTex[kind]=t;use(t);FEED['NASA Earth imagery']=true;feedMsg()};
@@ -758,12 +784,35 @@ $('srch').onsubmit=e=>{e.preventDefault();const v=$('q').value.trim(),t=v.toLowe
  const isObj=objects.some(o=>o.type!=='loc'&&o.name&&(o.name.toLowerCase()===t||o.name.toLowerCase().replace(/^the /,'')===t));
  if(!isObj&&!(focus&&(focus.id==='earth'||focus.type==='loc')))select(earthO);$('ll').value=v;runSearch(v,$('llerr'))};
 
+
+/* ---------- live weather layer on the globe ---------- */
+let wxGrid=null,wxMode='clouds',wxAt=0;const WX_STEP=10,WX_LATS=[],WX_LONS=[];for(let la=-80;la<=80;la+=WX_STEP)WX_LATS.push(la);for(let lo=-180;lo<180;lo+=WX_STEP)WX_LONS.push(lo);
+async function loadWxGrid(){const pts=[];for(const la of WX_LATS)for(const lo of WX_LONS)pts.push([la,lo]);const out=new Array(pts.length);let ok=0;
+ for(let i=0;i<pts.length;i+=60){const ch=pts.slice(i,i+60);const j=await getData(`https://api.open-meteo.com/v1/forecast?latitude=${ch.map(p=>p[0]).join(',')}&longitude=${ch.map(p=>p[1]).join(',')}&current=cloud_cover,precipitation,temperature_2m,weather_code`);
+  if(!j){if(i===0){FEED['live weather layer']=false;feedMsg();return}continue}(Array.isArray(j)?j:[j]).forEach((r,k)=>{if(r&&r.current){out[i+k]=r.current;ok++}})}
+ if(!ok)return;wxGrid=out;wxAt=Date.now();FEED['live weather layer']=true;feedMsg();paintWx();if(focus&&(focus.id==='earth'||focus.type==='loc'))$('wxx').hidden=false}
+function wxAtLL(lat,lon,key){const nl=WX_LONS.length,fy=(Math.max(-80,Math.min(80,lat))+80)/WX_STEP,fx=((lon+180)%360+360)%360/WX_STEP,y0=Math.min(WX_LATS.length-2,Math.floor(fy)),x0=Math.floor(fx)%nl,x1=(x0+1)%nl,ty=fy-y0,tx=fx-Math.floor(fx);
+ const v=(y,x)=>{const c=wxGrid[y*nl+x];return c?(c[key]??0):0};return lerp(lerp(v(y0,x0),v(y0,x1),tx),lerp(v(y0+1,x0),v(y0+1,x1),tx),ty)}
+const tempRamp=t=>ramp(['#2b2fbf','#2f7fe0','#3fc6d9','#7fe07f','#f5e04a','#f59a2a','#e0362a','#8a1020'],(t+30)/75);
+function paintWx(){const cl=BODIES.find(b=>b.id==='earth')._cl;if(!cl)return;if(wxMode==='off'){cl.visible=false;return}cl.visible=true;if(!wxGrid)return;
+ const W=720,H=360,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d'),im=g.createImageData(W,H),d=im.data;
+ for(let j=0;j<H;j++){const lat=90-(j+.5)/H*180,lr=lat*D2R,cl_=Math.cos(lr),sy=Math.sin(lr);for(let i=0;i<W;i++){const lon=(i+.5)/W*360-180,lo=(lon+180)*D2R,x=cl_*Math.cos(lo)+2,y=sy+2,z=cl_*Math.sin(lo)+2,k=(j*W+i)*4;let r,gg,b,a;
+  if(wxMode==='clouds'){const cc=wxAtLL(lat,lon,'cloud_cover')/100,pr=wxAtLL(lat,lon,'precipitation'),n=fbm(x*5,y*5,z*5,4,60),q=sm(.2,.85,cc+(n-.5)*.7);r=gg=b=255;a=q*225+Math.min(1,pr/3)*25;if(pr>.5){r=gg=232;b=240}}
+  else if(wxMode==='temp'){[r,gg,b]=tempRamp(wxAtLL(lat,lon,'temperature_2m'));a=150}
+  else{const pr=wxAtLL(lat,lon,'precipitation'),t=wxAtLL(lat,lon,'temperature_2m'),q=sm(.05,4,pr);[r,gg,b]=t<0?[235,245,255]:[60,140,255];a=q*210}
+  d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=a}}
+ g.putImageData(im,0,0);cl.material.map=new THREE.CanvasTexture(cv);cl.material.needsUpdate=true;cl.rotation.y=0;cl.userData.live=true;
+ $('wxcap').textContent=`${wxMode==='clouds'?'Real cloud cover':wxMode==='temp'?'Air temperature (blue cold → red hot)':'Rain (blue) and snow (white) falling now'} from Open-Meteo on a ${WX_STEP}° grid, updated ${new Date(wxAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Refreshes every 30 minutes.`}
+document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{wxMode=b.dataset.wx;document.querySelectorAll('[data-wx]').forEach(x=>x.classList.toggle('on',x===b));paintWx()});
+document.querySelector('[data-wx=clouds]').classList.add('on');
+loadWxGrid();setInterval(loadWxGrid,30*60*1000);
+
 /* ---------- live state ---------- */
 const HP={};let moonNow=null;
 function updateWorld(ms){orient('sun',ms,sunMesh.quaternion);
  for(const s of planetState){if(s.b.parent){moonNow=moonGeo(ms);s.holder.position.copy(eclToThree(...moonNow.v).multiplyScalar(s.b.a))}
   else{HP[s.b.id]=helio(s.b.id,ms);s.holder.position.copy(disp(HP[s.b.id]))}
-  orient(s.b.id,ms,s.mesh.quaternion);if(s.b._cl)s.b._cl.rotation.y=(ms/864e5*.15)%(Math.PI*2)}
+  orient(s.b.id,ms,s.mesh.quaternion);if(s.b._cl&&!s.b._cl.userData.live)s.b._cl.rotation.y=(ms/864e5*.15)%(Math.PI*2)}
  objects.find(o=>o.id==='belt').spin.rotation.y=dJ(ms)*2*Math.PI/1680;
  for(const s of SATS)s.sp.position.copy((s.satrec&&satECI(s.satrec,ms))||satPos(s,ms));updateCons(ms);
  const sunDir=earthHolder.position.clone().negate().normalize();jwst.position.copy(sunDir.clone().multiplyScalar(-ER*7));
@@ -892,7 +941,7 @@ function showInfo(o){$('iname').textContent=o.name;$('ikind').textContent=o.kind
   if(o.id==='earth')L.push(['Live weather & storms — Windy ↗','https://www.windy.com/',1],['Live satellite clouds, fires & hurricanes — Zoom Earth ↗','https://zoom.earth/'],['Live earthquakes — USGS ↗','https://earthquake.usgs.gov/earthquakes/map/'],['Live natural events — NASA Worldview ↗','https://worldview.earthdata.nasa.gov/'],['Live aurora forecast — NOAA ↗','https://www.swpc.noaa.gov/products/aurora-30-minute-forecast'],['Where is the ISS now? — NASA ↗','https://spotthestation.nasa.gov/']);
   if(o.wiki)L.push(['Read more on Wikipedia ↗',WIKI(o.wiki)])}
  $('ilinks').innerHTML=L.map(([t,u,pri])=>`<a class="real${pri?'':' alt'}" href="${u}" target="_blank" rel="noopener">${t}</a>`).join('');
- $('earthx').hidden=!(o.id==='earth'||o.type==='loc');$('imgx').hidden=!(FEED['NASA Earth imagery']!==false&&Object.values(FEED).some(Boolean));
+ $('earthx').hidden=!(o.id==='earth'||o.type==='loc');$('zoomx').hidden=o.type!=='loc';$('wxx').hidden=!(o.id==='earth'||o.type==='loc')||!wxGrid;$('imgx').hidden=!(FEED['NASA Earth imagery']!==false&&Object.values(FEED).some(Boolean));
  $('extra').innerHTML=o.type==='events'?eventsHTML():o.type==='loc'?issPasses(o):'';if(o.type==='loc')loadWeather(o);
  $('ilivecap').textContent=o.type==='events'?'':'Right now (at the time shown)';renderLive();
  if(o.type!=='loc')$('results').innerHTML='';$('mapbox').hidden=true;if(o.type==='loc'&&liveOK())showMap(o);else loadPhoto(o);
@@ -929,7 +978,9 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
   if(fly.surface)fly.dir=tgt.clone().sub(worldPos(earthO)).normalize();
   const camTo=fly.camTo||tgt.clone().add(fly.dir.clone().multiplyScalar(fly.dist));camera.position.lerpVectors(fly.camFrom,camTo,e);
   if(fly.t>=1)fly=null}
- controls.minDistance=focus&&['loc','sat','nat','quake','event'].includes(focus.type)?.2:1;
+ controls.minDistance=focus&&focus.type==='loc'?.003:focus&&['sat','nat','quake','event'].includes(focus.type)?.2:1;
+ {const dcam=camera.position.distanceTo(controls.target),nr=Math.max(1e-5,Math.min(.05,dcam*.05));if(Math.abs(nr-camera.near)/camera.near>.2){camera.near=nr;camera.updateProjectionMatrix()}}
+ if(pin.visible){const dp=camera.position.distanceTo(worldPos(locO));const k=Math.min(.15,Math.max(.0006,dp*.045));pin.scale.set(k,k,1);pinRing.scale.setScalar(k*1.0);pinRing.material.opacity=.35+.35*Math.sin(performance.now()/300)}
  controls.update();renderer.render(scene,camera);
  if(performance.now()-lastUI>250){lastUI=performance.now();
   $('when').textContent=new Date(simMs).toLocaleString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit',timeZoneName:'short'});
